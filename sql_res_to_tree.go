@@ -109,7 +109,7 @@ func (s *sqlResFormatTree) setUsedKeyInvalid(rValue reflect.Value) error {
 	return nil
 }
 
-//  获取正在分析(处理)的结构体主键键名（unique）
+//  获取正在分析(处理)的结构体主键键名（PrimaryKey）
 func (s *sqlResFormatTree) getCurStructPrimaryKeyName(value reflect.Type) string {
 	numField := value.NumField()
 	for i := 0; i < numField; i++ {

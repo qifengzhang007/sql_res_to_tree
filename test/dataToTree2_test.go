@@ -33,9 +33,9 @@ type SqlCityList struct {
 //    {id:8 CityName:泗泾镇      Fid:4   Status:1 Remark:""}
 
 //    {id:9 CityName:河北省      Fid:0   Status:1 Remark:""}
-	//    {id:10 CityName:邯郸市      Fid:9   Status:1 Remark:"二级城市节点"}
-	//    {id:11 CityName:邯山区      Fid:10   Status:1 Remark:"市区划分"}
-	//    {id:12 CityName:复兴区      Fid:10   Status:1 Remark:"市区划分"}
+//    {id:10 CityName:邯郸市      Fid:9   Status:1 Remark:"二级城市节点"}
+//    {id:11 CityName:邯山区      Fid:10   Status:1 Remark:"市区划分"}
+//    {id:12 CityName:复兴区      Fid:10   Status:1 Remark:"市区划分"}
 //]
 
 //  指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
@@ -139,7 +139,7 @@ func mocData2() []SqlCityList {
 
 	tmp = SqlCityList{
 		8,
-		"佘山镇",
+		"泗泾镇",
 		4,
 		1,
 		"松江区，镇之一",

@@ -62,7 +62,7 @@ func TestScanWay1(t *testing.T) {
 
 	if err := sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(tmp, &dest); err == nil {
 		bytes, _ := json.Marshal(dest)
-		fmt.Printf("树形结果:%s\n", bytes)
+		fmt.Printf("树形化结果:%s\n", bytes)
 	} else {
 		t.Errorf("单元测试失败，错误：%s\n", err.Error())
 	}
