@@ -3,7 +3,7 @@ package test
 import (
 	"encoding/json"
 	"fmt"
-	"sql_res_to_tree"
+	"github.com/qifengzhang007/sql_res_to_tree"
 	"testing"
 )
 
