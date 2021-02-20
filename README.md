@@ -21,9 +21,9 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
 ###  使用方法  
-[sql结果无限极树形化](./test/dataToTree2_test.go)  
+[sql结果无限级树形化](./test/dataToTree2_test.go)  
 
-[sql结果有限且支持个性化设置字段极树形化](./test/dataToTree2_test.go)  
+[sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree2_test.go)  
 
 ###  效果图  
 >1.有限层级的数据,按照每一层拥有不同字段的结构体树形化,原始数据如下：  
