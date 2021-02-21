@@ -163,7 +163,7 @@ func mocData2() []SqlCityList {
 
 	tmp = SqlCityList{
 		11,
-		"邯郸区",
+		"邯山区",
 		10,
 		1,
 		"市区划分",

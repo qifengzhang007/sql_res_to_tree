@@ -7,12 +7,14 @@ import (
 
 // 可能的错误常量
 const (
-	inSliceErrMustValidSlice  = "参数一(inSlice) 必须是一个不为空值的结构体切片"
-	destSlicePtrErrMustPtr    = "参数二(destSlicePtr) 必须是一个指针"
-	destSlicePtrErrMustSlice  = "参数二(destSlicePtr) 必须是一个结构体切片的指针"
-	structErrMustPrimaryKey   = "结构体必须设置 primaryKey 标签，指定每一层结构体的主键"
-	structErrMustFid          = "子结构体必须设置 fid 标签，指定父级键名"
-	structPrimaryKeyMustUpper = "结构体主键字段（primaryKey 标签所在键）必须以大写字母开头（扫描原始数据时本程序需要修改主键字段值的权限）"
+	inSliceErrMustValidSlice    = "参数一(inSlice) 必须是一个不为空值的结构体切片"
+	destSlicePtrErrMustPtr      = "参数二(destSlicePtr) 必须是一个指针"
+	destSlicePtrErrMustSlice    = "参数二(destSlicePtr) 必须是一个结构体切片的指针"
+	structErrMustPrimaryKey     = "结构体必须设置 primaryKey 标签，指定每一层结构体的主键"
+	structErrMustFid            = "子结构体必须设置 fid 标签，指定父级键名"
+	structPrimaryKeyMustUpper   = "结构体主键字段（primaryKey 标签所在键）必须以大写字母开头（扫描原始数据时本程序需要修改主键字段值的权限）"
+	destStructFieldNotExists    = "参数二(destSlicePtr) 结构体定义的字段（包括类型）必须在 inSlice 参数传递的结构体中存在，否则无法获取值,请检查字段名称书写是否有误，错误字段名："
+	destStructFidFieldNotExists = "子结构体设置的 fid 标签对应的字段不存在于 inSlice 参数传递的结构体中存在,fid设置的错误字段名："
 )
 
 func CreateSqlResFormatFactory() *sqlResFormatTree {
@@ -56,7 +58,7 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 	if primaryKeyName == "" {
 		return errors.New(structErrMustPrimaryKey)
 	} else {
-		s.storeprimaryKey(primaryKeyName)
+		s.storePrimaryKey(primaryKeyName)
 	}
 	// 返回结构体指针
 	TmpOriginStruct := reflect.New(structElem)
@@ -68,7 +70,10 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 
 	//遍历sql查询结果集的行
 	for rowIndex := 0; rowIndex < inLen; rowIndex++ {
-		row := inValueOf.Index(rowIndex) //  struct
+		row := inValueOf.Index(rowIndex)
+		if !s.destStructFieldIsExists(row.Type(), primaryKeyName) {
+			return errors.New(destStructFieldNotExists + primaryKeyName)
+		}
 		mainKeyField := row.FieldByName(primaryKeyName)
 		mainId := mainKeyField.Int()
 		if mainId > 0 {
@@ -80,7 +85,11 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 						return err
 					}
 				} else {
-					structElemValueOf.Field(i).Set(row.FieldByName(structElem.Field(i).Name))
+					if structElemTypeOf.Field(i).Name == structElem.Field(i).Name && structElemTypeOf.Field(i).Type.Kind() == structElem.Field(i).Type.Kind() {
+						structElemValueOf.Field(i).Set(row.FieldByName(structElem.Field(i).Name))
+					} else {
+						return errors.New(destStructFieldNotExists + structElemTypeOf.Field(i).Name)
+					}
 				}
 			}
 			originSlice = reflect.Append(originSlice, structElemValueOf)
@@ -90,7 +99,7 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 	return nil
 }
 
-func (s *sqlResFormatTree) storeprimaryKey(keyName string) {
+func (s *sqlResFormatTree) storePrimaryKey(keyName string) {
 	if s.primaryKey[keyName] != keyName {
 		s.primaryKey[keyName] = keyName
 	}
@@ -143,6 +152,17 @@ func (s *sqlResFormatTree) getCurStructSubFKeyName(value reflect.Type) string {
 	return ""
 }
 
+// 判断 dest 结构体中的字段是否在 inSlice 参数中的结构体中存在
+func (s *sqlResFormatTree) destStructFieldIsExists(inSliceStruct reflect.Type, destFieldStructName string) bool {
+	num := inSliceStruct.NumField()
+	for i := 0; i < num; i++ {
+		if inSliceStruct.Field(i).Name == destFieldStructName {
+			return true
+		}
+	}
+	return false
+}
+
 // 继续分析 children 结构体
 func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice reflect.Value, children reflect.Type) (reflect.Value, error) {
 	resChildren := reflect.MakeSlice(children, 0, 0)
@@ -165,9 +185,12 @@ func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice r
 	if parentPrimaryKeyName == "" {
 		return reflect.Value{}, errors.New(structErrMustPrimaryKey)
 	}
+	if !s.destStructFieldIsExists(parentField.Type(), parentKeyName) {
+		return reflect.Value{}, errors.New(destStructFidFieldNotExists + parentKeyName)
+	}
 	mainId := parentField.FieldByName(parentKeyName).Int()
 
-	s.storeprimaryKey(parentPrimaryKeyName)
+	s.storePrimaryKey(parentPrimaryKeyName)
 
 	if mainId > 0 {
 		for subRowIndex := 0; subRowIndex < inLen; subRowIndex++ {
@@ -176,22 +199,25 @@ func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice r
 			subKeyField := subRow.FieldByName(subKeyName)
 
 			subPrimaryKeyName := s.getCurStructPrimaryKeyName(newTypeOf)
-			subprimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
+			subPrimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
 			subKeyId := subKeyField.Int()
 
-			s.storeprimaryKey(subPrimaryKeyName)
+			s.storePrimaryKey(subPrimaryKeyName)
 
-			if subKeyId > 0 && subKeyId == mainId && subprimaryKeyField.Int() > 0 {
+			if subKeyId > 0 && subKeyId == mainId && subPrimaryKeyField.Int() > 0 {
 				for j := 0; j < fieldNum; j++ {
 					if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
 						if val, err := s.analysisChildren(subRow, inSlice, newTypeOf.Field(j).Type); err == nil {
 							newValueOf.Field(j).Set(val)
 						} else {
-							newValueOf.Field(j).Set(reflect.Value{})
 							return reflect.Value{}, err
 						}
 					} else {
-						newValueOf.Field(j).Set(subRow.FieldByName(newTypeOf.Field(j).Name))
+						if s.destStructFieldIsExists(subRow.Type(), subRow.Type().Field(j).Name) {
+							newValueOf.Field(j).Set(subRow.FieldByName(newTypeOf.Field(j).Name))
+						} else {
+							return reflect.Value{}, errors.New(destStructFidFieldNotExists + subRow.Type().Field(j).Name)
+						}
 					}
 				}
 				if err := s.setUsedKeyInvalid(inSlice.Index(subRowIndex)); err != nil {
