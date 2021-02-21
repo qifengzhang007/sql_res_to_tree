@@ -69,7 +69,7 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
     sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
-> 1.2  最终将 dest 变量 json化
+> 1.2  最终将 dest 变量 json化  
 ![效果图1](demo_pic/tree1.jpg)  
 
 
@@ -116,6 +116,6 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
     sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
-> 2.2  最终将 dest 变量 json化
+> 2.2  最终将 dest 变量 json化  
 ![效果图2](demo_pic/tree2.jpg)  
 
