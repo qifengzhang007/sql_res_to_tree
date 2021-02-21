@@ -27,7 +27,9 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ###  效果图  
 >1.有限层级的数据,按照每一层拥有不同字段的结构体树形化,原始数据如下：  
-实现方法:[详细实现过程](./test/dataToTree_test.go)
+实现方法:[详细实现过程](./test/dataToTree_test.go)  
+> 注意细节：SchoolId、GradeId等每一级的主键首字母必须是大写的（允许本包进行修改字段值），一般来说gorm查询的结果都是符合此条件的，
+> 如果是手动模拟输入以下数据，则必须要注意此项。  
 ```code   
 [
 	{SchoolId:1 SchoolName:第一中学(高中) FkSchoolId:1 GradeId:1 GradeName:高一 FkGradeId:1 ClassId:1 ClassName:文科班} 
@@ -74,24 +76,25 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 
 > 2.无限层级的数据(结构体自己嵌套自己)树形化,原始数据如下：  
-> 实现方法:[详细实现过程](./test/dataToTree2_test.go)  
-
+> 实现方法:[详细实现过程](./test/dataToTree2_test.go)    
+> 注意细节：Id 作为每一级的主键首字母必须是大写的（允许本包进行修改字段值），一般来说gorm查询的结果都是符合此条件的，
+> 如果是手动模拟输入以下数据，则必须要注意此项。
 ```code   
 [
-{id:1 CityName:上海      Fid:0   STATUS:1 Remark:上海(一级节点)}
-    {id:2 CityName:上海市      Fid:1   STATUS:1 Remark:上海市(二级节点)}
-	  {id:3 CityName:徐汇区      Fid:2   STATUS:1 Remark:""}
-	    {id:5 CityName:田林路      Fid:3   STATUS:1 Remark:"街道"}
-	    {id:6 CityName:宜山路      Fid:3   STATUS:1 Remark:"街道"}
+{Id:1 CityName:上海      Fid:0   Satatus:1 Remark:上海(一级节点)}
+    {Id:2 CityName:上海市      Fid:1   Satatus:1 Remark:上海市(二级节点)}
+	  {Id:3 CityName:徐汇区      Fid:2   Satatus:1 Remark:""}
+	    {Id:5 CityName:田林路      Fid:3   Satatus:1 Remark:"街道"}
+	    {Id:6 CityName:宜山路      Fid:3   Satatus:1 Remark:"街道"}
 
-	{id:4 CityName:松江区      Fid:2   STATUS:1 Remark:""}
-	    {id:7 CityName:佘山      Fid:4   STATUS:1 Remark:""}
-	    {id:8 CityName:泗泾镇      Fid:4   STATUS:1 Remark:""}
+	{Id:4 CityName:松江区      Fid:2   Satatus:1 Remark:""}
+	    {Id:7 CityName:佘山      Fid:4   Satatus:1 Remark:""}
+	    {Id:8 CityName:泗泾镇      Fid:4   Satatus:1 Remark:""}
 
-    {id:9 CityName:河北省      Fid:0   STATUS:1 Remark:""}
-	    {id:10 CityName:邯郸市      Fid:9   STATUS:1 Remark:"二级城市节点"}
-	      {id:11 CityName:邯山区      Fid:10   STATUS:1 Remark:"市区划分"}
-	      {id:12 CityName:复兴区      Fid:10   STATUS:1 Remark:"市区划分"}
+    {Id:9 CityName:河北省      Fid:0   Satatus:1 Remark:""}
+	    {Id:10 CityName:邯郸市      Fid:9   Satatus:1 Remark:"二级城市节点"}
+	      {Id:11 CityName:邯山区      Fid:10   Satatus:1 Remark:"市区划分"}
+	      {Id:12 CityName:复兴区      Fid:10   Satatus:1 Remark:"市区划分"}
 ]
 ```
 
