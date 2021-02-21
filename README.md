@@ -72,7 +72,7 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
 > 1.2  最终将 dest 变量 json化  
-![效果图1](/demo_pic/tree1.jpg)  
+![效果图1](https://www.ginskeleton.com/images/tree1.jpg)  
 
 
 > 2.无限层级的数据(结构体自己嵌套自己)树形化  
@@ -121,5 +121,5 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
 > 2.2  最终将 dest 变量 json 化  
-![效果图2](/demo_pic/tree2.jpg)  
+![效果图2](https://www.ginskeleton.com/images/tree2.jpg)  
 
