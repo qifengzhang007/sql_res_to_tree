@@ -7,23 +7,23 @@
 
 ###  核心树形化扫描函数    
 >  1.核心函数，只有一个 ScanToTreeData(inSqlSlice, &dest)    
->  2.使用非常简单,就跟 gorm 的 Scan、Find函数类似，定义一个接受树形结果的结构体切片，传入地址,坐等接受结果.  
+>  2.使用非常简单,就跟 gorm 的 Scan、Find函数类似，定义一个接受树形结果的结构体切片，传入地址,坐等扫描结果.  
 
 ### 集成到任何项目  
 ```code  
-# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.1为例
+# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.2为例
 
 # 安装此包
-go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.1
+go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.2
 
 #调用sql结果树形化扫描函数， &dest  为接受树形结果的结构体切片，定义方式参考相关的单元测试示例代码  
 sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
-###  使用方法  
-[sql结果无限级树形化](./test/dataToTree2_test.go)  
+###  使用方法，相关代码详情  
+1. [sql结果无限级树形化](./test/dataToTree2_test.go)  
 
-[sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree_test.go)  
+2. [sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree_test.go)  
 
 ###  效果图  
 >1.有限层级的数据,按照每一层拥有不同字段的结构体树形化,原始数据如下：  
@@ -119,6 +119,6 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
     sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
-> 2.2  最终将 dest 变量 json化  
+> 2.2  最终将 dest 变量 json 化  
 ![效果图2](demo_pic/tree2.jpg)  
 
