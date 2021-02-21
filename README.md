@@ -20,17 +20,17 @@ go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.2
 sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
-###  使用方法，相关代码详情  
-1. [sql结果无限级树形化](./test/dataToTree2_test.go)  
-
-2. [sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree_test.go)  
+###  使用方法，相关代码详情
+1. [sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree_test.go)  
+2. [sql结果无限级树形化](./test/dataToTree2_test.go)
 
 ###  效果图  
->1.有限层级的数据,按照每一层拥有不同字段的结构体树形化,原始数据如下：  
+>1.有限层级的数据,支持每一层拥有不同字段的结构体树形化    
 实现方法:[详细实现过程](./test/dataToTree_test.go)  
 > 注意细节：SchoolId、GradeId等每一级的主键首字母必须是大写的（允许本包进行修改字段值），一般来说gorm查询的结果都是符合此条件的，
 > 如果是手动模拟输入以下数据，则必须要注意此项。  
 ```code   
+//原始数据如下(gorm的 Find、 Scan 函数扫描结果都符合以下结构)：
 [
 	{SchoolId:1 SchoolName:第一中学(高中) FkSchoolId:1 GradeId:1 GradeName:高一 FkGradeId:1 ClassId:1 ClassName:文科班} 
 	{SchoolId:1 SchoolName:第一中学(高中) FkSchoolId:1 GradeId:2 GradeName:高二 FkGradeId:2 ClassId:2 ClassName:理科班} 
@@ -75,11 +75,12 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 ![效果图1](demo_pic/tree1.jpg)  
 
 
-> 2.无限层级的数据(结构体自己嵌套自己)树形化,原始数据如下：  
+> 2.无限层级的数据(结构体自己嵌套自己)树形化  
 > 实现方法:[详细实现过程](./test/dataToTree2_test.go)    
 > 注意细节：Id 作为每一级的主键首字母必须是大写的（允许本包进行修改字段值），一般来说gorm查询的结果都是符合此条件的，
 > 如果是手动模拟输入以下数据，则必须要注意此项。
 ```code   
+//原始数据如下(gorm的 Find、 Scan 函数扫描结果都符合以下结构)：  
 [
 {Id:1 CityName:上海      Fid:0   Satatus:1 Remark:上海(一级节点)}
     {Id:2 CityName:上海市      Fid:1   Satatus:1 Remark:上海市(二级节点)}

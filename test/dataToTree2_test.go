@@ -58,7 +58,6 @@ func TestScanWay2(t *testing.T) {
 	//var tmp = make([]SqlList, len(in))
 	//copy(tmp, in) // 复制一份原始数据到 tmp 变量
 
-	fmt.Printf("%+v\n", in)
 	if err := sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(in, &dest); err == nil {
 		bytes, _ := json.Marshal(dest)
 		fmt.Printf("最终树形结果:%s\n", bytes)
@@ -67,8 +66,6 @@ func TestScanWay2(t *testing.T) {
 	}
 
 }
-
-//  模拟一个具有多层次，但是每个结构体字段不同的结构体切片进行树形化
 
 // 模拟一个多层次，无限嵌套的，拥有相同字段的结构体切片
 func mocData2() []SqlCityList {
