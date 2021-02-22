@@ -213,10 +213,8 @@ func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice r
 							return reflect.Value{}, err
 						}
 					} else {
-						if s.destStructFieldIsExists(subRow.Type(), subRow.Type().Field(j).Name) {
+						if s.destStructFieldIsExists(subRow.Type(), newTypeOf.Field(j).Name) {
 							newValueOf.Field(j).Set(subRow.FieldByName(newTypeOf.Field(j).Name))
-						} else {
-							return reflect.Value{}, errors.New(destStructFidFieldNotExists + subRow.Type().Field(j).Name)
 						}
 					}
 				}

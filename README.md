@@ -11,10 +11,10 @@
 
 ### 集成到任何项目  
 ```code  
-# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.3为例
+# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.4为例
 
 # 安装此包
-go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.3
+go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.4
 
 #调用sql结果树形化扫描函数， &dest  为接受树形结果的结构体切片，定义方式参考相关的单元测试示例代码  
 sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
@@ -62,6 +62,7 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 				FkGradeId int `fid:"GradeId"`
 				ClassId   int `primaryKey:"yes"`
 				ClassName string
+				Remark string    //  允许目的变量中的字段（Remark）可以在 sql 查询结果集中不存在，这样相当于自动赋予了默认值
 			} `json:"children"`
 		} `json:"children"`
 	}

@@ -49,6 +49,7 @@ func TestScanWay1(t *testing.T) {
 				FkGradeId int `fid:"GradeId"`
 				ClassId   int `primaryKey:"yes"`
 				ClassName string
+				Remark    string //  允许目的变量中的字段可以在 sql 查询结果集中不存在，这样相当于自动赋予了默认值
 			} `json:"children"`
 		} `json:"children"`
 	}
