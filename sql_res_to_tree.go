@@ -113,7 +113,7 @@ func (s *sqlResFormatTree) storePrimaryKey(keyName string) {
 func (s *sqlResFormatTree) setUsedKeyInvalid(rValue reflect.Value) error {
 	for key := range s.primaryKey {
 		if rValue.FieldByName(key).CanSet() {
-			rValue.FieldByName(key).SetInt(-1)
+			rValue.FieldByName(key).SetInt(0)
 
 		} else {
 			return errors.New(structPrimaryKeyMustUpper)
