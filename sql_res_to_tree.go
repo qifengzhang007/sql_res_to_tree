@@ -3,6 +3,7 @@ package sql_res_to_tree
 import (
 	"errors"
 	"reflect"
+	"strconv"
 )
 
 // 可能的错误常量
@@ -10,8 +11,8 @@ const (
 	inSliceErrMustValidSlice    = "参数一(inSlice) 必须是一个不为空值的结构体切片"
 	destSlicePtrErrMustPtr      = "参数二(destSlicePtr) 必须是一个指针"
 	destSlicePtrErrMustSlice    = "参数二(destSlicePtr) 必须是一个结构体切片的指针"
-	structErrMustPrimaryKey     = "结构体必须设置 primaryKey 标签，指定每一层结构体的主键"
-	structErrMustFid            = "子结构体必须设置 fid 标签，指定父级键名"
+	structErrMustPrimaryKey     = "每级结构体必须设置 primaryKey 标签，指定每一层结构体的主键"
+	structErrMustFid            = "子结构体必须设置 fid 标签，指定的父级键名也必须存在,错误的键名："
 	structPrimaryKeyMustUpper   = "结构体主键字段（primaryKey 标签所在键）必须以大写字母开头（扫描原始数据时本程序需要修改主键字段值的权限）"
 	destStructFieldNotExists    = "参数二(destSlicePtr) 结构体定义的字段（包括类型）必须在 inSlice 参数传递的结构体中存在，否则无法获取值,请检查字段名称书写是否有误，错误字段名："
 	destStructFidFieldNotExists = "子结构体设置的 fid 标签对应的字段不存在于 inSlice 参数传递的结构体中存在,fid设置的错误字段名："
@@ -85,10 +86,13 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 						return err
 					}
 				} else {
-					if structElemTypeOf.Field(i).Name == structElem.Field(i).Name && structElemTypeOf.Field(i).Type.Kind() == structElem.Field(i).Type.Kind() {
+					if s.destStructFieldIsSame(row.Type(), structElemTypeOf.Field(i)) {
 						structElemValueOf.Field(i).Set(row.FieldByName(structElem.Field(i).Name))
 					} else {
-						return errors.New(destStructFieldNotExists + structElemTypeOf.Field(i).Name)
+						//如果目的结构体的字段不存在于原始数据结构体中，那么寻找 default 标签对应的默认值进行赋值； 否则跳过
+						if val, ok := s.setFieldDefaultValue(structElemTypeOf, structElemTypeOf.Field(i).Name); ok {
+							structElemValueOf.Field(i).Set(val)
+						}
 					}
 				}
 			}
@@ -163,6 +167,17 @@ func (s *sqlResFormatTree) destStructFieldIsExists(inSliceStruct reflect.Type, d
 	return false
 }
 
+// 判断 dest 结构体中的字段是否在 inSlice 参数中的结构体中存在(字段名称+数据类型相同)
+func (s *sqlResFormatTree) destStructFieldIsSame(inSliceStruct reflect.Type, destFieldStruct reflect.StructField) bool {
+	num := inSliceStruct.NumField()
+	for i := 0; i < num; i++ {
+		if inSliceStruct.Field(i).Name == destFieldStruct.Name && inSliceStruct.Field(i).Type == destFieldStruct.Type {
+			return true
+		}
+	}
+	return false
+}
+
 // 继续分析 children 结构体
 func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice reflect.Value, children reflect.Type) (reflect.Value, error) {
 	resChildren := reflect.MakeSlice(children, 0, 0)
@@ -196,9 +211,15 @@ func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice r
 		for subRowIndex := 0; subRowIndex < inLen; subRowIndex++ {
 			subRow := inSlice.Index(subRowIndex)
 			subKeyName := s.getCurStructSubFKeyName(newTypeOf)
+			if subKeyName == "" {
+				return reflect.Value{}, errors.New(structErrMustFid + subKeyName)
+			}
 			subKeyField := subRow.FieldByName(subKeyName)
 
 			subPrimaryKeyName := s.getCurStructPrimaryKeyName(newTypeOf)
+			if subPrimaryKeyName == "" {
+				return reflect.Value{}, errors.New(structErrMustPrimaryKey)
+			}
 			subPrimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
 			subKeyId := subKeyField.Int()
 
@@ -215,6 +236,11 @@ func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice r
 					} else {
 						if s.destStructFieldIsExists(subRow.Type(), newTypeOf.Field(j).Name) {
 							newValueOf.Field(j).Set(subRow.FieldByName(newTypeOf.Field(j).Name))
+						} else {
+							//如果目的结构体的字段不存在于原始数据结构体中，那么寻找 default 标签对应的默认值进行赋值； 否则跳过
+							if val, ok := s.setFieldDefaultValue(newTypeOf, newTypeOf.Field(j).Name); ok {
+								newValueOf.Field(j).Set(val)
+							}
 						}
 					}
 				}
@@ -226,4 +252,43 @@ func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice r
 		}
 	}
 	return resChildren, nil
+}
+
+// 针对目的结构体中不存在的字段，根据tag标签设置的 default值进行默认赋值
+func (s *sqlResFormatTree) setFieldDefaultValue(fieldType reflect.Type, fieldName string) (reflect.Value, bool) {
+	if f, ok := fieldType.FieldByName(fieldName); ok {
+		if val, ok2 := f.Tag.Lookup("default"); ok2 {
+			switch f.Type.Kind() {
+			case reflect.String:
+				return reflect.ValueOf(val), true
+			case reflect.Float32:
+				if tmp, err := strconv.ParseFloat(val, 32); err == nil {
+					return reflect.ValueOf(tmp), true
+				}
+			case reflect.Float64:
+				if tmp, err := strconv.ParseFloat(val, 64); err == nil {
+					return reflect.ValueOf(tmp), true
+				}
+			case reflect.Int:
+				if tmp, err := strconv.Atoi(val); err == nil {
+					return reflect.ValueOf(tmp), true
+				}
+			case reflect.Int32:
+				if tmp, err := strconv.ParseInt(val, 10, 32); err == nil {
+					return reflect.ValueOf(tmp), true
+				}
+			case reflect.Int64:
+				if tmp, err := strconv.ParseInt(val, 10, 64); err == nil {
+					return reflect.ValueOf(tmp), true
+				}
+			case reflect.Bool:
+				if tmp, err := strconv.ParseBool(val); err == nil {
+					return reflect.ValueOf(tmp), true
+				}
+			default:
+				break
+			}
+		}
+	}
+	return reflect.Value{}, false
 }

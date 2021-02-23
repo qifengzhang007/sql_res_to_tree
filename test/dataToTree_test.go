@@ -41,6 +41,7 @@ func TestScanWay1(t *testing.T) {
 	type Stu struct {
 		SchoolId   int    `primaryKey:"yes" json:"school_id"`
 		SchoolName string `json:"school_name"`
+		TestRemark string `json:"test_remark" default:"第一层结构体测试默认值"`
 		Children   []struct {
 			FkSchoolId int `fid:"SchoolId"`
 			GradeId    int `primaryKey:"yes"`
@@ -49,7 +50,9 @@ func TestScanWay1(t *testing.T) {
 				FkGradeId int `fid:"GradeId"`
 				ClassId   int `primaryKey:"yes"`
 				ClassName string
-				Remark    string //  允许目的变量中的字段可以在 sql 查询结果集中不存在，这样相当于自动赋予了默认值
+				Remark    string `default:"为自定义字段使用default标签设置默认值"` //  允许目的变量中的字段可以在 sql 查询结果集中不存在，这样程序寻找default标签对应的值进行赋值，否则就是默认空值
+				TestInt   int    `default:"100"`                    // default 标签支持 int  int16  int32  int64  string  bool
+				TestBool  bool   `default:"true"`
 			} `json:"children"`
 		} `json:"children"`
 	}
