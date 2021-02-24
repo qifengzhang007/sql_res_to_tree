@@ -23,7 +23,8 @@ type SqlList struct {
 	ClassName string
 }
 
-// 查询数据示例
+// 查询数据示例（相当于gorm的Find、Scan 函数扫描结果）
+
 //[
 //{SchoolId:1 SchoolName:第一中学(高中)      FkSchoolId:1 GradeId:1 GradeName:高一           FkGradeId:1 ClassId:1 ClassName:文科班}
 //{SchoolId:1 SchoolName:第一中学(高中)      FkSchoolId:1 GradeId:2 GradeName:高二           FkGradeId:2 ClassId:2 ClassName:理科班}

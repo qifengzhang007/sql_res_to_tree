@@ -18,8 +18,7 @@ type SqlCityList struct {
 	Remark   string
 }
 
-// 查询数据示例(本质上就是 GormDbMysql.Raw("select * from  ...").Find(&receive))
-// 以下结果本质上就是gorm返回的结果
+// 查询数据示例(相当于gorm的Find、Scan 函数扫描结果)
 
 //[
 //{id:1 CityName:上海      Fid:0   Status:1 Remark:上海(一级节点)}
