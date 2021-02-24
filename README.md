@@ -24,9 +24,9 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 1. [sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree_test.go)  
 2. [sql结果无限级树形化](./test/dataToTree2_test.go)
 
-###  效果图  
+###  主要实现过程  
 >1.有限层级的数据,支持每一层拥有不同字段的结构体树形化    
-实现方法:[详细实现过程](./test/dataToTree_test.go)  
+[详细实现过程](./test/dataToTree_test.go)  
 > 注意细节：SchoolId、GradeId等每一级的主键首字母必须是大写的（允许本包进行修改字段值），一般来说gorm查询的结果都是符合此条件的，
 > 如果是手动模拟输入以下数据，则必须要注意此项。  
 ```code   
@@ -73,12 +73,12 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
     sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
-> 1.2  最终将 dest 变量 json化  
+> 1.2  最终将 dest 变量使用 json.Marshal函数 json化  
 ![效果图1](https://www.ginskeleton.com/images/tree1.jpg)  
 
 
 > 2.无限层级的数据(结构体自己嵌套自己)树形化  
-> 实现方法:[详细实现过程](./test/dataToTree2_test.go)    
+[详细实现过程](./test/dataToTree2_test.go)    
 > 注意细节：Id 作为每一级的主键首字母必须是大写的（允许本包进行修改字段值），一般来说gorm查询的结果都是符合此条件的，
 > 如果是手动模拟输入以下数据，则必须要注意此项。
 ```code   
@@ -122,6 +122,6 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
     sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
-> 2.2  最终将 dest 变量 json 化  
+> 2.2  最终将 dest 变量使用 json.Marshal函数 json化  
 ![效果图2](https://www.ginskeleton.com/images/tree2.jpg)  
 
