@@ -57,20 +57,17 @@ func TestScanWay1(t *testing.T) {
 		} `json:"children"`
 	}
 	var dest = make([]Stu, 0)
+
+	// 模拟一份结构体切片格式的数据集(相当于gorm的sql函数 Scan Find的结果)
+	// 测试有限层级的数据树形化
 	in := mocData()
 
-	// 如果被处理的sql结果需要后续使用，那么必须复制一份被处理的数据
-	// 因为经过本次处理以后，原始sql结果集相关的上下关联关系键值会被改变
-	var tmp = make([]SqlList, len(in))
-	copy(tmp, in) // 复制一份原始数据到 tmp 变量
-
-	if err := sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(tmp, &dest); err == nil {
+	if err := sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(in, &dest); err == nil {
 		bytes, _ := json.Marshal(dest)
-		fmt.Printf("树形化结果:%s\n", bytes)
+		fmt.Printf("树形化结果:\n%s\n", bytes)
 	} else {
 		t.Errorf("单元测试失败，错误：%s\n", err.Error())
 	}
-
 }
 
 //  模拟一个具有多层次，但是每个结构体字段不同的结构体切片进行树形化

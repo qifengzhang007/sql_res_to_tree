@@ -8,6 +8,7 @@ import (
 
 // 可能的错误常量
 const (
+	inSliceCopyFail             = "参数一(inSlice) 程序copy时失败,请保证入参是不为空的结构体切片"
 	inSliceErrMustValidSlice    = "参数一(inSlice) 必须是一个不为空值的结构体切片"
 	destSlicePtrErrMustPtr      = "参数二(destSlicePtr) 必须是一个指针"
 	destSlicePtrErrMustSlice    = "参数二(destSlicePtr) 必须是一个结构体切片的指针"
@@ -32,9 +33,12 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 	if inTypeOf.Kind() != reflect.Slice {
 		return errors.New(inSliceErrMustValidSlice)
 	}
-
-	inValueOf := reflect.ValueOf(inSlice)
-
+	inValueOfOrigin := reflect.ValueOf(inSlice)
+	inValueOf := reflect.MakeSlice(inTypeOf, inValueOfOrigin.Len(), inValueOfOrigin.Cap())
+	copyNum := reflect.Copy(inValueOf, inValueOfOrigin)
+	if copyNum < 1 {
+		return errors.New(inSliceCopyFail)
+	}
 	inLen := inValueOf.Len()
 	if inLen == 0 {
 		return errors.New(inSliceErrMustValidSlice)

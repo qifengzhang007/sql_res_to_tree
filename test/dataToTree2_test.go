@@ -51,20 +51,15 @@ func TestScanWay2(t *testing.T) {
 		Children []ProvinceCity
 	}
 	var dest = make([]ProvinceCity, 0)
+	// 模拟一份结构体切片格式的数据集(相当于gorm的sql函数 Scan Find的结果)
+	// 测试无限层级的数据树形化（自己嵌套自己）
 	in := mocData2()
-
-	// 如果被处理的sql结果需要后续使用，那么必须复制一份被处理的数据
-	// 因为经过本次处理以后，原始sql结果集相关的上下关联关系键值会被改变
-	//var tmp = make([]SqlList, len(in))
-	//copy(tmp, in) // 复制一份原始数据到 tmp 变量
-
 	if err := sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(in, &dest); err == nil {
 		bytes, _ := json.Marshal(dest)
-		fmt.Printf("最终树形结果:%s\n", bytes)
+		fmt.Printf("最终树形结果:\n%s\n", bytes)
 	} else {
 		t.Errorf("单元测试失败，错误：%s\n", err.Error())
 	}
-
 }
 
 // 模拟一个多层次，无限嵌套的，拥有相同字段的结构体切片
