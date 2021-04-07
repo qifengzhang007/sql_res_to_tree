@@ -1,7 +1,7 @@
 ## SQL 查询结果快速树形化  
 
 ### 前言  
->   1.针对sql查询结果,进行树形化,支持指定层级深度、无限层级深度的数据树形化.  
+>   1.针对sql查询结果,进行树形化,支持有限层级深度、单张树形表查询结果、多张树形表查询结果的联合结果 数据进行树形化.    
 >   2.本包搭配 gorm sql查询结果扫描函数 Scan Find ,将获取的结果直接传递给本包，可以非常方便快捷地进行数据的树形化.  
  
 
@@ -11,10 +11,10 @@
 
 ### 集成到任何项目  
 ```code  
-# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.8为例
+# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.9为例
 
 # 安装此包
-go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.8
+go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.9
 
 #调用sql结果树形化扫描函数， &dest  为接受树形结果的结构体切片，定义方式参考相关的单元测试示例代码  
 sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
@@ -22,7 +22,13 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 ```
 ###  使用方法，相关代码详情
 1. [sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree_test.go)  
-2. [sql结果无限级树形化](./test/dataToTree2_test.go)
+2. [单张表sql结果无限级树形化](./test/dataToTree2_test.go)  
+> 2.1 单张表，例如：省份城市树形表,特点是id是唯一的.  
+
+3. [多张表sql结果无限级树形化](./test/dataToTree3_test.go)  
+> 3.1 多张表，例如：A表是树形表、B表是树形表、C表是树形表，但是他们依次是挂接关系，这样的三张表查询的数据大概率ID存在重复,我们依旧可以实现树形化.
+> 树形化以后，如何确定相同的id是哪张表，这个时候就需要我们事先在查询 A B C表的时候给数据打不同的标记, 这样在处理业务的时候，首选锁定业务标记，再获取ID.  
+> 3.2 多张树形表查询结果必须将每一张表的数据呈现在一起，不能把 A B C三张表的数据无序地混合在一起，这样会导致树形结果漏掉数据.  
 
 ###  主要实现过程  
 #### 1.有限层级的数据,支持每一层拥有不同字段的结构体树形化    

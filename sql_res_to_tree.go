@@ -8,7 +8,6 @@ import (
 
 // 可能的错误常量
 const (
-	inSliceCopyFail             = "参数一(inSlice) 程序copy时失败,请保证入参是不为空的结构体切片"
 	inSliceErrMustValidSlice    = "参数一(inSlice) 必须是一个不为空值的结构体切片"
 	destSlicePtrErrMustPtr      = "参数二(destSlicePtr) 必须是一个指针"
 	destSlicePtrErrMustSlice    = "参数二(destSlicePtr) 必须是一个结构体切片的指针"
@@ -17,14 +16,17 @@ const (
 	structPrimaryKeyMustUpper   = "结构体主键字段（primaryKey 标签所在键）必须以大写字母开头（扫描原始数据时本程序需要修改主键字段值的权限）"
 	destStructFieldNotExists    = "参数二(destSlicePtr) 结构体定义的字段（包括类型）必须在 inSlice 参数传递的结构体中存在，否则无法获取值,请检查字段名称书写是否有误，错误字段名："
 	destStructFidFieldNotExists = "子结构体设置的 fid 标签对应的字段不存在于 inSlice 参数传递的结构体中存在,fid设置的错误字段名："
+	allowMaxRows                = 100000
+	overAllowMaxRows            = "程序遍历次数已经超过了 100000 次,可能已经选入了死循环,请检查传入的数据是否符合要求,引起该错误的原因 primaryKey 标签字段和 fid 标签字段值不要出现互相嵌套，此外保证 primaryKey 标签键值唯一"
 )
 
 func CreateSqlResFormatFactory() *sqlResFormatTree {
-	return &sqlResFormatTree{make(map[string]string)}
+	return &sqlResFormatTree{make(map[string]string), 0}
 }
 
 type sqlResFormatTree struct {
 	primaryKey map[string]string
+	counts     int // 统计程序秭归计算的次数
 }
 
 func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr interface{}) (err error) {
@@ -33,12 +35,9 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 	if inTypeOf.Kind() != reflect.Slice {
 		return errors.New(inSliceErrMustValidSlice)
 	}
-	inValueOfOrigin := reflect.ValueOf(inSlice)
-	inValueOf := reflect.MakeSlice(inTypeOf, inValueOfOrigin.Len(), inValueOfOrigin.Cap())
-	copyNum := reflect.Copy(inValueOf, inValueOfOrigin)
-	if copyNum < 1 {
-		return errors.New(inSliceCopyFail)
-	}
+
+	inValueOf := reflect.ValueOf(inSlice)
+
 	inLen := inValueOf.Len()
 	if inLen == 0 {
 		return errors.New(inSliceErrMustValidSlice)
@@ -75,6 +74,7 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 
 	//遍历sql查询结果集的行
 	for rowIndex := 0; rowIndex < inLen; rowIndex++ {
+		s.counts++
 		row := inValueOf.Index(rowIndex)
 		if !s.destStructFieldIsExists(row.Type(), primaryKeyName) {
 			return errors.New(destStructFieldNotExists + primaryKeyName)
@@ -84,7 +84,7 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 		if mainId > 0 {
 			for i := 0; i < fieldNum; i++ {
 				if structElem.Field(i).Name == "Children" && structElem.Field(i).Type.Kind() == reflect.Slice {
-					if val, err := s.analysisChildren(row, inValueOf, structElem.Field(i).Type); err == nil {
+					if val, err := s.analysisChildren(int64(rowIndex), mainId, row, inValueOf, structElem.Field(i).Type); err == nil {
 						structElemValueOf.Field(i).Set(val)
 					} else {
 						return err
@@ -183,8 +183,14 @@ func (s *sqlResFormatTree) destStructFieldIsSame(inSliceStruct reflect.Type, des
 }
 
 // 继续分析 children 结构体
-func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice reflect.Value, children reflect.Type) (reflect.Value, error) {
+func (s *sqlResFormatTree) analysisChildren(parentRowIndex, parentId int64, parentField reflect.Value, inSlice reflect.Value, children reflect.Type) (reflect.Value, error) {
+	s.counts++
 	resChildren := reflect.MakeSlice(children, 0, 0)
+
+	if s.counts > allowMaxRows {
+		return resChildren, errors.New(overAllowMaxRows)
+	}
+
 	vType := children.Elem()
 	newStruct := reflect.New(vType)
 
@@ -232,10 +238,14 @@ func (s *sqlResFormatTree) analysisChildren(parentField reflect.Value, inSlice r
 			if subKeyId > 0 && subKeyId == mainId && subPrimaryKeyField.Int() > 0 {
 				for j := 0; j < fieldNum; j++ {
 					if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
-						if val, err := s.analysisChildren(subRow, inSlice, newTypeOf.Field(j).Type); err == nil {
-							newValueOf.Field(j).Set(val)
+						if s.curItemHasSubLists(parentRowIndex, parentId, subKeyName, subPrimaryKeyName, inSlice) {
+							if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.Int(), subRow, inSlice, newTypeOf.Field(j).Type); err == nil {
+								newValueOf.Field(j).Set(val)
+							} else {
+								return reflect.Value{}, err
+							}
 						} else {
-							return reflect.Value{}, err
+							return resChildren, nil
 						}
 					} else {
 						if s.destStructFieldIsExists(subRow.Type(), newTypeOf.Field(j).Name) {
@@ -295,4 +305,16 @@ func (s *sqlResFormatTree) setFieldDefaultValue(fieldType reflect.Type, fieldNam
 		}
 	}
 	return reflect.Value{}, false
+}
+
+// 判断当前行底下是否还有挂接子级数据
+func (s *sqlResFormatTree) curItemHasSubLists(curIndex, curMainId int64, subFKeyName, subPrimaryKeyName string, inSlice reflect.Value) (res bool) {
+	for i := int(curIndex); i < inSlice.Len()-1; i++ {
+
+		subFKeyValue := inSlice.Index(i + 1).FieldByName(subFKeyName).Int()
+		if curMainId == subFKeyValue {
+			return true
+		}
+	}
+	return false
 }
