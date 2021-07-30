@@ -294,7 +294,7 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 
 					s.storePrimaryKey(subPrimaryKeyName)
 
-					if subFKeyId > 0 && subFKeyId == ParentIdInt {
+					if subFKeyId > 0 && subFKeyId == ParentIdInt && !subPrimaryKeyField.IsZero() {
 						for j := 0; j < fieldNum; j++ {
 							if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
 								if s.curItemHasSubLists(int64(subRowIndex), ParentIdInt, subFKeyName) {
@@ -365,7 +365,7 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 
 					s.storePrimaryKey(subPrimaryKeyName)
 
-					if subFKeyId != "" && subFKeyId == ParentIdStr {
+					if subFKeyId != "" && subFKeyId == ParentIdStr && !subPrimaryKeyField.IsZero() {
 						for j := 0; j < fieldNum; j++ {
 							if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
 								if s.curItemHasSubLists(parentRowIndex, ParentIdStr, subFKeyName) {
