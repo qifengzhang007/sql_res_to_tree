@@ -87,21 +87,22 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 		}
 
 		mainKeyField := row.FieldByName(primaryKeyName)
+
 		switch primaryKeyDataType {
 		case 1:
-
 			primaryKeyIdInt = mainKeyField.Int()
 			if primaryKeyIdInt > 0 {
 				primaryKeyIdInterf = primaryKeyIdInt
+			} else {
+				continue
 			}
 		case 2:
 			primaryKeyIdStr = mainKeyField.String()
 			if strings.ReplaceAll(primaryKeyIdStr, " ", "") != "" {
 				primaryKeyIdInterf = primaryKeyIdStr
 			} else {
-				return errors.New(primaryKeyValueIsBlankError + primaryKeyName)
+				continue
 			}
-
 		}
 		if primaryKeyIdInterf != nil {
 			for i := 0; i < fieldNum; i++ {
@@ -126,7 +127,6 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 			}
 			destTmpSlice = reflect.Append(destTmpSlice, structElemValueOf)
 		}
-
 	}
 	destValueOf.Set(destTmpSlice)
 	return nil
@@ -299,11 +299,23 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 							if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
 								if s.curItemHasSubLists(int64(subRowIndex), ParentIdInt, subFKeyName) {
 									// fmt.Printf("递归通过父级主键%s,值:%d，寻找下一级的外键：%s ,是否有对应的值:%s\n",subPrimaryKeyName,ParentIdInt,subFKeyName,"有值")
-									if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.Int(), subRow, newTypeOf.Field(j).Type); err == nil {
-										newValueOf.Field(j).Set(val)
-									} else {
-										return reflect.Value{}, err
+									if dataType, err := s.curPrimaryKeyDataType(subRow, subPrimaryKeyName); err == nil {
+										switch dataType {
+										case 1:
+											if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.Int(), subRow, newTypeOf.Field(j).Type); err == nil {
+												newValueOf.Field(j).Set(val)
+											} else {
+												return reflect.Value{}, err
+											}
+										case 2:
+											if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.String(), subRow, newTypeOf.Field(j).Type); err == nil {
+												newValueOf.Field(j).Set(val)
+											} else {
+												return reflect.Value{}, err
+											}
+										}
 									}
+
 								} else {
 									return resChildren, nil
 								}
@@ -357,10 +369,21 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 						for j := 0; j < fieldNum; j++ {
 							if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
 								if s.curItemHasSubLists(parentRowIndex, ParentIdStr, subFKeyName) {
-									if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.String(), subRow, newTypeOf.Field(j).Type); err == nil {
-										newValueOf.Field(j).Set(val)
-									} else {
-										return reflect.Value{}, err
+									if dataType, err := s.curPrimaryKeyDataType(subRow, subPrimaryKeyName); err == nil {
+										switch dataType {
+										case 1:
+											if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.Int(), subRow, newTypeOf.Field(j).Type); err == nil {
+												newValueOf.Field(j).Set(val)
+											} else {
+												return reflect.Value{}, err
+											}
+										case 2:
+											if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.String(), subRow, newTypeOf.Field(j).Type); err == nil {
+												newValueOf.Field(j).Set(val)
+											} else {
+												return reflect.Value{}, err
+											}
+										}
 									}
 								} else {
 									return resChildren, nil
@@ -437,16 +460,16 @@ func (s *sqlResFormatTree) setFieldDefaultValue(fieldType reflect.Type, fieldNam
 func (s *sqlResFormatTree) curItemHasSubLists(curIndex int64, curMainId interface{}, subFKeyName string) (res bool) {
 
 	for i := int(curIndex); i < s.inSliceLen-1; i++ {
-		tmpField := s.inSliceValueOf.Index(i + 1)
+		tmpField := s.inSliceValueOf.Index(i)
 		if pDataType, err := s.curPrimaryKeyDataType(tmpField, subFKeyName); err == nil {
 			switch pDataType {
 			case 1:
-				subFKeyValue := s.inSliceValueOf.Index(i + 1).FieldByName(subFKeyName).Int()
+				subFKeyValue := s.inSliceValueOf.Index(i).FieldByName(subFKeyName).Int()
 				if curMainId.(int64) == subFKeyValue {
 					return true
 				}
 			case 2:
-				subFKeyValue := s.inSliceValueOf.Index(i + 1).FieldByName(subFKeyName).String()
+				subFKeyValue := s.inSliceValueOf.Index(i).FieldByName(subFKeyName).String()
 				if curMainId.(string) == subFKeyValue {
 					return true
 				}
