@@ -459,7 +459,7 @@ func (s *sqlResFormatTree) setFieldDefaultValue(fieldType reflect.Type, fieldNam
 
 func (s *sqlResFormatTree) curItemHasSubLists(curIndex int64, curMainId interface{}, subFKeyName string) (res bool) {
 
-	for i := int(curIndex); i < s.inSliceLen-1; i++ {
+	for i := int(curIndex); i <= s.inSliceLen-1; i++ {
 		tmpField := s.inSliceValueOf.Index(i)
 		if pDataType, err := s.curPrimaryKeyDataType(tmpField, subFKeyName); err == nil {
 			switch pDataType {

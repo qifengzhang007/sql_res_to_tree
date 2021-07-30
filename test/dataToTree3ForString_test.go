@@ -33,23 +33,22 @@ type SqlDeptMenuButtonString struct {
 // 本包树形化时并不需要该字段
 
 //[
-//{id:1 OrgTitle:上海仪电数字技术股份有限公司      OrgFid:0   NodeType:dept  Expand:1 }
-//{id:35 OrgTitle:信息化中心      OrgFid:1   NodeType:dept  Expand:1  }
-//	  {id:36 CityName:超级管理员      OrgFid:35   NodeType:dept  Expand:1 }
+//
+//{Id:1 OrgFid:0 OrgTitle:上海仪电数字技术股份有限公司 NodeType:dept Expand:1}
+//
+//{Id:35 OrgFid:1 OrgTitle:信息化中心 NodeType:dept Expand:1}
 
-//	  {id:238 CityName:系统配置      OrgFid:36   NodeType:menu  Expand:1 }
-//	  {id:330 CityName:组织机构      OrgFid:328   NodeType:menu  Expand:0 }
-//	  {id:333 CityName:用户管理      OrgFid:328   NodeType:menu  Expand:0 }
+//{Id:36 OrgFid:35 OrgTitle:超级管理员 NodeType:dept Expand:1}
+//{Id:328 OrgFid:36 OrgTitle:系统配置 NodeType:menu Expand:1}
+//{Id:330 OrgFid:328 OrgTitle:组织机构 NodeType:menu Expand:0}
+//{Id:1 OrgFid:330 OrgTitle:新增 NodeType:button Expand:0}
+//{Id:35 OrgFid:330 OrgTitle:删除 NodeType:button Expand:0}
+//{Id:333 OrgFid:328 OrgTitle:用户管理 NodeType:menu Expand:0}
 
-//	  {id:343 CityName:系统配置      OrgFid:1   NodeType:menu  Expand:1 }
-//	  {id:344 CityName:公共权限      OrgFid:343   NodeType:menu  Expand:0 }
-//	  {id:27 CityName:组织机构      OrgFid:344   NodeType:button  Expand:0 }
-//	  {id:37 CityName:文件上传      OrgFid:344   NodeType:button  Expand:0 }
-
-//	  {id:1 CityName:新增      OrgFid:330   NodeType:button  Expand:0 }
-//	  {id:35 CityName:删除      OrgFid:330   NodeType:button  Expand:0 }
-//	  {id:36 CityName:修改      OrgFid:330   NodeType:button  Expand:0 }
-//	  {id:238 CityName:查询      OrgFid:330   NodeType:button  Expand:0 }
+//{Id:343 OrgFid:1 OrgTitle:系统配置 NodeType:menu Expand:0}
+//{Id:344 OrgFid:343 OrgTitle:公共权限 NodeType:menu Expand:0}
+//{Id:27 OrgFid:344 OrgTitle:组织机构 NodeType:button Expand:0}
+//{Id:37 OrgFid:344 OrgTitle:文件上传 NodeType:button Expand:0}
 //]
 
 //  指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
@@ -179,6 +178,7 @@ func mocStringData3() []SqlDeptMenuButtonString {
 		0,
 	}
 	res = append(res, tmp)
+
 	tmp = SqlDeptMenuButtonString{
 		"35",
 		"330",
