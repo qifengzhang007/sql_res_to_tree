@@ -2,7 +2,6 @@ package sql_res_to_tree
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -141,10 +140,18 @@ func (s *sqlResFormatTree) storePrimaryKey(keyName string) {
 
 // 设置已经遍历过的所有主键失效
 func (s *sqlResFormatTree) setUsedKeyInvalid(rValue reflect.Value) error {
-	for key := range s.primaryKey {
-		if rValue.FieldByName(key).CanSet() {
-			rValue.FieldByName(key).SetInt(0)
-
+	for primaryKeyName := range s.primaryKey {
+		if rValue.FieldByName(primaryKeyName).CanSet() {
+			if dataType, err := s.curPrimaryKeyDataType(rValue, primaryKeyName); err == nil {
+				switch dataType {
+				case 1:
+					rValue.FieldByName(primaryKeyName).SetInt(0)
+				case 2:
+					rValue.FieldByName(primaryKeyName).SetString("")
+				}
+			} else {
+				return errors.New(primaryKeyDataTypeError + primaryKeyName)
+			}
 		} else {
 			return errors.New(structPrimaryKeyMustUpper)
 		}
@@ -211,7 +218,7 @@ func (s *sqlResFormatTree) destStructFieldIsSame(inSliceStruct reflect.Type, des
 // 继续分析 children 结构体
 // 参数解释
 // 1.parentRowIndex ： 正在遍历的sql结果集的当前行号
-// 2.parentId： 正在遍历的sql结果集的当前行结构体的主键id, 有可能是 int64 类型、也有可能是 string 类型
+// 2.parentId： 正在遍历的sql结果集的当前行 --> 结构体的主键id, 有可能是 int64 类型、也有可能是 string 类型
 // 3.parentField ：正在遍历的sql结果集的当前行结构体（valueOf）
 // 4.childrenType : dest结构体中的 Children 字段类型(typeOf)，本质上就是一个切片类型
 
@@ -231,7 +238,7 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 	newValueOf := newStruct.Elem()
 	fieldNum := newTypeOf.NumField()
 
-	// 获取当前结构体中，某个字段定义的fid对应的父键(外键)名称
+	// 获取当前结构体中，某个字段定义的fid对应的父键名称
 	parentKeyName := s.getCurStructParentKeyName(newTypeOf)
 	if parentKeyName == "" {
 		return reflect.Value{}, errors.New(structErrMustFid)
@@ -243,17 +250,11 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 		return reflect.Value{}, errors.New(structErrMustPrimaryKey)
 	}
 
-	fmt.Printf("父键：%s -----  外键：5%s\n", parentKeyName, curStructPrimaryKeyName)
 	// 子级结构体中定义的外键（fid标签设置的父键），必须在父级字段中存在
 	// 这样才能形成  父---子 数据关联关系
 	if !s.destStructFieldIsExists(parentField.Type(), parentKeyName) {
 		return reflect.Value{}, errors.New(destStructFidFieldNotExists + parentKeyName)
 	}
-
-	// 对于 Children 字段来说，就是 fid 中定义的父键，在父级结构体中对应的值，
-	// 根据这个值，寻找他的子结果集
-
-	//mainId := parentField.FieldByName(parentKeyName).Int()
 
 	s.storePrimaryKey(curStructPrimaryKeyName)
 
@@ -273,18 +274,20 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 
 					// 获取children切片中的结构体元素 fid 所在标签的字段名
 					// 对于上层结构体来说，就是外键字段名
-					subKeyName := s.getCurStructSubFKeyName(newTypeOf)
-					if subKeyName == "" {
-						return reflect.Value{}, errors.New(structErrMustFid + subKeyName)
+					subFKeyName := s.getCurStructSubFKeyName(newTypeOf)
+					if subFKeyName == "" {
+						return reflect.Value{}, errors.New(structErrMustFid + subFKeyName)
 					}
 
-					subFKeyField := subRow.FieldByName(subKeyName)
+					subFKeyField := subRow.FieldByName(subFKeyName)
 					// 获取children切片中的结构体元素中， primaryKey 所在的标签对应的字段名，即 主键字段名
 					subPrimaryKeyName := s.getCurStructPrimaryKeyName(newTypeOf)
 					if subPrimaryKeyName == "" {
 						return reflect.Value{}, errors.New(structErrMustPrimaryKey)
 					}
-					//subPrimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
+
+					// 子集 数据中的主键
+					subPrimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
 
 					//相对父级行来说，就是子外键的值
 					subFKeyId := subFKeyField.Int()
@@ -294,8 +297,9 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 					if subFKeyId > 0 && subFKeyId == ParentIdInt {
 						for j := 0; j < fieldNum; j++ {
 							if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
-								if s.curItemHasSubLists(parentRowIndex, ParentIdInt, subKeyName, subPrimaryKeyName) {
-									if val, err := s.analysisChildren(int64(subRowIndex), subFKeyId, subRow, newTypeOf.Field(j).Type); err == nil {
+								if s.curItemHasSubLists(int64(subRowIndex), ParentIdInt, subFKeyName) {
+									// fmt.Printf("递归通过父级主键%s,值:%d，寻找下一级的外键：%s ,是否有对应的值:%s\n",subPrimaryKeyName,ParentIdInt,subFKeyName,"有值")
+									if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.Int(), subRow, newTypeOf.Field(j).Type); err == nil {
 										newValueOf.Field(j).Set(val)
 									} else {
 										return reflect.Value{}, err
@@ -341,7 +345,8 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 					if subPrimaryKeyName == "" {
 						return reflect.Value{}, errors.New(structErrMustPrimaryKey)
 					}
-					//subPrimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
+
+					subPrimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
 
 					//相对父级行来说，就是子外键的值
 					subFKeyId := subFKeyField.String()
@@ -351,8 +356,8 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentId inter
 					if subFKeyId != "" && subFKeyId == ParentIdStr {
 						for j := 0; j < fieldNum; j++ {
 							if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
-								if s.curItemHasSubLists(parentRowIndex, ParentIdStr, subFKeyName, subPrimaryKeyName) {
-									if val, err := s.analysisChildren(int64(subRowIndex), subFKeyId, subRow, newTypeOf.Field(j).Type); err == nil {
+								if s.curItemHasSubLists(parentRowIndex, ParentIdStr, subFKeyName) {
+									if val, err := s.analysisChildren(int64(subRowIndex), subPrimaryKeyField.String(), subRow, newTypeOf.Field(j).Type); err == nil {
 										newValueOf.Field(j).Set(val)
 									} else {
 										return reflect.Value{}, err
@@ -428,9 +433,9 @@ func (s *sqlResFormatTree) setFieldDefaultValue(fieldType reflect.Type, fieldNam
 // 1.curIndex ：    sql结果集循环的当前行号
 // 2.curMainId ：   sql结果集循环的当前结构体的主键ID
 // 3.subFKeyName：  sql结果集循环的当前结构体的主键ID对应的子级外键名称
-// 4.subPrimaryKeyName： 子级结构体中主键名称
 
-func (s *sqlResFormatTree) curItemHasSubLists(curIndex int64, curMainId interface{}, subFKeyName, subPrimaryKeyName string) (res bool) {
+func (s *sqlResFormatTree) curItemHasSubLists(curIndex int64, curMainId interface{}, subFKeyName string) (res bool) {
+
 	for i := int(curIndex); i < s.inSliceLen-1; i++ {
 		tmpField := s.inSliceValueOf.Index(i + 1)
 		if pDataType, err := s.curPrimaryKeyDataType(tmpField, subFKeyName); err == nil {
