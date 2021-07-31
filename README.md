@@ -10,11 +10,12 @@
 >  2.使用非常简单,就跟 gorm 的 Scan、Find函数类似，定义一个接受树形结果的结构体切片，传入地址,坐等扫描结果.  
 
 ### 3.集成到任何项目  
+> 新版本正在测试中(>=v1.0.10),目前不稳定。请勿使用，如果需要体验，请使用 v1.0.9 版本  
 ```code  
-# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.11为例
+# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.9为例
 
 # 安装此包
-go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.11
+go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.9
 
 #调用sql结果树形化扫描函数， &dest  为接受树形结果的结构体切片，定义方式参考相关的单元测试示例代码  
 sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
