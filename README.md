@@ -30,7 +30,7 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
   ![转换逻辑2](https://www.ginskeleton.com/images/sql1.png)
 - 3.3 原始数据转换为树形数据的过程逻辑    
   ![转换逻辑2](https://www.ginskeleton.com/images/process2.png)
-- 
+
 ###  5.使用方法，相关代码详情
 1. [sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree_test.go)  
 2. [单张表sql结果无限级树形化](./test/dataToTree2_test.go)  
