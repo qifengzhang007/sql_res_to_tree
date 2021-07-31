@@ -33,18 +33,14 @@ type SqlDeptMenuButtonString struct {
 // 本包树形化时并不需要该字段
 
 //[
-//
 //{Id:1 OrgFid:0 OrgTitle:上海仪电数字技术股份有限公司 NodeType:dept Expand:1}
-//
 //{Id:35 OrgFid:1 OrgTitle:信息化中心 NodeType:dept Expand:1}
-
 //{Id:36 OrgFid:35 OrgTitle:超级管理员 NodeType:dept Expand:1}
 //{Id:328 OrgFid:36 OrgTitle:系统配置 NodeType:menu Expand:1}
 //{Id:330 OrgFid:328 OrgTitle:组织机构 NodeType:menu Expand:0}
 //{Id:1 OrgFid:330 OrgTitle:新增 NodeType:button Expand:0}
 //{Id:35 OrgFid:330 OrgTitle:删除 NodeType:button Expand:0}
 //{Id:333 OrgFid:328 OrgTitle:用户管理 NodeType:menu Expand:0}
-
 //{Id:343 OrgFid:1 OrgTitle:系统配置 NodeType:menu Expand:0}
 //{Id:344 OrgFid:343 OrgTitle:公共权限 NodeType:menu Expand:0}
 //{Id:27 OrgFid:344 OrgTitle:组织机构 NodeType:button Expand:0}
