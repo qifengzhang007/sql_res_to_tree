@@ -45,10 +45,10 @@ func TestScanStringData(t *testing.T) {
 		TestRemark string `json:"test_remark" default:"第一层结构体测试默认值"`
 		Children   []struct {
 			FkSchoolId int    `fid:"SchoolId"`
-			GradeId    string `primaryKey:"yes"`
+			GradeId    string `primaryKey:"yes"` //  本层的主键是string
 			GradeName  string
 			Children   []struct {
-				FkGradeId string `fid:"GradeId"`
+				FkGradeId string `fid:"GradeId"` //  本层外键需要和上级GradeId建立关联关系，那么数据类型必须相同
 				ClassId   string `primaryKey:"yes"`
 				ClassName string
 				Remark    string `default:"为自定义字段使用default标签设置默认值"` //  允许目的变量中的字段可以在 sql 查询结果集中不存在，这样程序寻找default标签对应的值进行赋值，否则就是默认空值
