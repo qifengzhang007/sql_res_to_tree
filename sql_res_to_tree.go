@@ -484,7 +484,7 @@ func (s *sqlResFormatTree) curItemHasSubLists(curIndex int64, curMainId interfac
 func (s *sqlResFormatTree) curPrimaryKeyDataType(rValue reflect.Value, keyName string) (int, error) {
 	//fmt.Printf("当前结构体的主键：%s, 字段信息：%#+v，主键值：%v\n", keyName, rValue.Interface(), rValue.FieldByName(keyName))
 	switch rValue.FieldByName(keyName).Kind() {
-	case reflect.Int64, reflect.Int, reflect.Int16, reflect.Int32:
+	case reflect.Int64, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Uint8, reflect.Uint16, reflect.Uint32:
 		return 1, nil
 	case reflect.String:
 		return 2, nil
