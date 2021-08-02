@@ -13,5 +13,4 @@ const (
 	allowMaxRows                = 100000
 	overAllowMaxRows            = "程序遍历次数已经超过了 100000 次,可能已经选入了死循环,请检查传入的数据是否符合要求,引起该错误的原因 primaryKey 标签字段和 fid 标签字段值不要出现互相嵌套，此外保证 primaryKey 标签键值唯一"
 	primaryKeyDataTypeError     = "主键数据类型必须是 int系列(int、int16、int32、int64) 和 string 类型，其他类型不支持,错误发生的主键为： "
-	primaryKeyValueIsBlankError = "主键对应的值为空白值,错误发生的主键为： "
 )
