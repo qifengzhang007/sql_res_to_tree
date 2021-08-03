@@ -273,44 +273,11 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentField re
 					s.storePrimaryKey(subPrimaryKeyName)
 
 					if subFKeyId > 0 && subFKeyId == ParentIdInt && !subPrimaryKeyField.IsZero() {
-						for j := 0; j < fieldNum; j++ {
-							if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
-								if s.curItemHasSubLists(int64(subRowIndex), ParentIdInt, subFKeyName) {
-									if dataType, err := s.curPrimaryKeyDataType(subRow, subPrimaryKeyName); err == nil {
-										switch dataType {
-										case 1:
-											if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type); err == nil {
-												newValueOf.Field(j).Set(val)
-											} else {
-												return reflect.Value{}, err
-											}
-										case 2:
-											if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type); err == nil {
-												newValueOf.Field(j).Set(val)
-											} else {
-												return reflect.Value{}, err
-											}
-										}
-									}
-
-								} else {
-									return resChildren, nil
-								}
-							} else {
-								if s.destStructFieldIsExists(subRow.Type(), newTypeOf.Field(j).Name) {
-									newValueOf.Field(j).Set(subRow.FieldByName(newTypeOf.Field(j).Name))
-								} else {
-									//如果目的结构体的字段不存在于原始数据结构体中，那么寻找 default 标签对应的默认值进行赋值； 否则跳过
-									if val, ok := s.setFieldDefaultValue(newTypeOf, newTypeOf.Field(j).Name); ok {
-										newValueOf.Field(j).Set(val)
-									}
-								}
-							}
-						}
-						if err := s.setUsedKeyInvalid(subRowIndex); err != nil {
+						if tmpChildren, err := s.getLevelGe2Children(fieldNum, resChildren, newTypeOf, parentRowIndex, subRowIndex, ParentIdInt, subFKeyName, subPrimaryKeyName, subRow, newValueOf); err != nil {
 							return reflect.Value{}, err
+						} else {
+							resChildren = tmpChildren
 						}
-						resChildren = reflect.Append(resChildren, newValueOf)
 					}
 				}
 			}
@@ -343,49 +310,59 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentField re
 					s.storePrimaryKey(subPrimaryKeyName)
 
 					if subFKeyId != "" && subFKeyId == ParentIdStr && !subPrimaryKeyField.IsZero() {
-						for j := 0; j < fieldNum; j++ {
-							if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
-								if s.curItemHasSubLists(parentRowIndex, ParentIdStr, subFKeyName) {
-									if dataType, err := s.curPrimaryKeyDataType(subRow, subPrimaryKeyName); err == nil {
-										switch dataType {
-										case 1:
-											if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type); err == nil {
-												newValueOf.Field(j).Set(val)
-											} else {
-												return reflect.Value{}, err
-											}
-										case 2:
-											if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type); err == nil {
-												newValueOf.Field(j).Set(val)
-											} else {
-												return reflect.Value{}, err
-											}
-										}
-									}
-								} else {
-									return resChildren, nil
-								}
-							} else {
-								if s.destStructFieldIsExists(subRow.Type(), newTypeOf.Field(j).Name) {
-									newValueOf.Field(j).Set(subRow.FieldByName(newTypeOf.Field(j).Name))
-								} else {
-									//如果目的结构体的字段不存在于原始数据结构体中，那么寻找 default 标签对应的默认值进行赋值； 否则跳过
-									if val, ok := s.setFieldDefaultValue(newTypeOf, newTypeOf.Field(j).Name); ok {
-										newValueOf.Field(j).Set(val)
-									}
-								}
-							}
-						}
-						if err := s.setUsedKeyInvalid(subRowIndex); err != nil {
+						if tmpChildren, err := s.getLevelGe2Children(fieldNum, resChildren, newTypeOf, parentRowIndex, subRowIndex, ParentIdStr, subFKeyName, subPrimaryKeyName, subRow, newValueOf); err != nil {
 							return reflect.Value{}, err
+						} else {
+							resChildren = tmpChildren
 						}
-						resChildren = reflect.Append(resChildren, newValueOf)
 					}
 				}
 			}
 		}
 	}
 
+	return resChildren, nil
+}
+
+// 获取 ≥ 2层级的 children 切片的内容
+func (s *sqlResFormatTree) getLevelGe2Children(fieldNum int, resChildren reflect.Value, newTypeOf reflect.Type, parentRowIndex int64, subRowIndex int, ParentId interface{}, subFKeyName, subPrimaryKeyName string, subRow, newValueOf reflect.Value) (reflect.Value, error) {
+	for j := 0; j < fieldNum; j++ {
+		if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
+			if s.curItemHasSubLists(parentRowIndex, ParentId, subFKeyName) {
+				if dataType, err := s.curPrimaryKeyDataType(subRow, subPrimaryKeyName); err == nil {
+					switch dataType {
+					case 1:
+						if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type); err == nil {
+							newValueOf.Field(j).Set(val)
+						} else {
+							return reflect.Value{}, err
+						}
+					case 2:
+						if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type); err == nil {
+							newValueOf.Field(j).Set(val)
+						} else {
+							return reflect.Value{}, err
+						}
+					}
+				}
+			} else {
+				return resChildren, nil
+			}
+		} else {
+			if s.destStructFieldIsExists(subRow.Type(), newTypeOf.Field(j).Name) {
+				newValueOf.Field(j).Set(subRow.FieldByName(newTypeOf.Field(j).Name))
+			} else {
+				//如果目的结构体的字段不存在于原始数据结构体中，那么寻找 default 标签对应的默认值进行赋值； 否则跳过
+				if val, ok := s.setFieldDefaultValue(newTypeOf, newTypeOf.Field(j).Name); ok {
+					newValueOf.Field(j).Set(val)
+				}
+			}
+		}
+	}
+	if err := s.setUsedKeyInvalid(subRowIndex); err != nil {
+		return reflect.Value{}, err
+	}
+	resChildren = reflect.Append(resChildren, newValueOf)
 	return resChildren, nil
 }
 
