@@ -66,18 +66,18 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 	
 	// 接受树形结果的结构体要求如下：
 	// 1.主键必须使用 primaryKey:"yes" 标签定义，类型必须是  int  int64 in32 等int系列，以及 string 类型，不能是其他类型
-	// 2.子结构体关联父级结构体的键必须定义 `fid:"父级主键"`  标签，父子关联键数据类型必须都是 int  int32  int64 等int系列和 string 类型
+	// 2.子结构体关联父级结构体的键必须定义 `fid:"父级键名"`  标签，父子关联键数据类型必须相同，要么都是 int 系列，要么都是 string
 	
 	// 定义一个目标切片，用于接受最终的树形化数据
 	type Stu struct {
 		SchoolId   int    `primaryKey:"yes" json:"school_id"`
 		SchoolName string `json:"school_name"`
 		Children   []struct {
-			FkSchoolId int `fid:"SchoolId"`
+			FkSchoolId int `fid:"SchoolId"`  // 这里FkSchoolId的值就会和父级SchoolId的值建立关联关系，他们的数据类型必须一致
 			GradeId    int `primaryKey:"yes"`
 			GradeName  string
 			Children   []struct {
-				FkGradeId int `fid:"GradeId"`
+				FkGradeId int `fid:"GradeId"`  // 这里FkGradeId的值就会和父级GradeId的值建立关联关系，他们的数据类型必须一致
 				ClassId   int `primaryKey:"yes"`
 				ClassName string
 				Remark    string `default:"为自定义字段使用default标签设置默认值"` //  允许目的变量中的字段可以在 sql 查询结果集中不存在，这样程序寻找default标签对应的值进行赋值，否则就是默认空值
