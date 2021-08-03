@@ -325,6 +325,17 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentField re
 }
 
 // 获取 ≥ 2层级的 children 切片的内容
+// 参数解释
+// fieldNum 正在等待填充的 chilren 切片元素中的结构体字段数
+// resChildren 正在等待填充的 chilren 切片初始化后的变量
+// newTypeOf 正在等待填充的 chilren 切片元素中的结构体的 typeof
+// parentRowIndex 正在提取 chilren中数据时的当前行号
+// subRowIndex 正在遍历的子级数据行号
+// ParentId 正在提取 chilren中数据时的主键id(interface类型，主要是 int、string类型)
+// subFKeyName 正在遍历的子级数据外键名
+// subPrimaryKeyName 正在遍历的子级数据主键名
+// subRow 正在遍历的子级数据行号
+// newValueOf 正在等待填充的 chilren 切片元素中的结构体的 valueof
 func (s *sqlResFormatTree) getLevelGe2Children(fieldNum int, resChildren reflect.Value, newTypeOf reflect.Type, parentRowIndex int64, subRowIndex int, ParentId interface{}, subFKeyName, subPrimaryKeyName string, subRow, newValueOf reflect.Value) (reflect.Value, error) {
 	for j := 0; j < fieldNum; j++ {
 		if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
