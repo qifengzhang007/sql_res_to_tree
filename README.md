@@ -12,10 +12,10 @@
 ### 3.集成到任何项目
 > <font color=red> 1.注意: 请不要使用 v1.0.10 、v1.0.11 这两个过渡版本，永远推荐使用最新版本.</font>
 ```code  
-# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.12为例
+# 安装前请自行在tag标签查询最新版本，本次我们以 v1.0.13为例
 
 # 安装此包
-go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.12
+go   get  github.com/qifengzhang007/sql_res_to_tree@v1.0.13
 
 #调用sql结果树形化扫描函数， &dest  为接受树形结果的结构体切片，定义方式参考相关的单元测试示例代码  
 sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
