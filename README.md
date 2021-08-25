@@ -65,7 +65,9 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 - 使用非常简单，本包只有三个语法关键词
 - 1 `primaryKey:"yes"` 定义每一级的主键
 - 2 `fid:"父级键名"` 在子级特定的键上指定此标签，这样就把该键和父级结构体中的键建立了绑定(关联)关系
-- 3 `default:"默认值"` 定义的dest结构体中的字段如果在被扫描的sql结果集中不存在，那么使用该默认值填充. 
+- 3 `default:"默认值"` 定义的dest结构体中的字段如果在被扫描的sql结果集中不存在，那么使用该默认值填充.  
+- 4 接受数据的每一层级的结构体都可以添加字段，从原始sql的行数据中获取对应字段值.  
+
 ```code
 	
 	// 接受树形结果的结构体要求如下：
