@@ -267,6 +267,10 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentField re
 					// 子集 数据中的主键
 					subPrimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
 
+					//判断子健的数据类型必须为 int 系列
+					if val, _ := s.curPrimaryKeyDataType(subRow, subFKeyName); val != 1 {
+						return reflect.Value{}, errors.New(subKeyDataTypeIsNotIntError + subFKeyName)
+					}
 					//相对父级行来说，就是子外键的值
 					subFKeyId := subFKeyField.Int()
 
@@ -304,6 +308,11 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentField re
 
 					subPrimaryKeyField := subRow.FieldByName(subPrimaryKeyName)
 
+					//判断子健的数据类型必须为 string 系列
+					if val, _ := s.curPrimaryKeyDataType(subRow, subFKeyName); val != 2 {
+						return reflect.Value{}, errors.New(subKeyDataTypeIsNotStringError + subFKeyName)
+					}
+
 					//相对父级行来说，就是子外键的值
 					subFKeyId := subFKeyField.String()
 
@@ -334,7 +343,7 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentField re
 // ParentId 正在提取 chilren中数据时的主键id(interface类型，主要是 int、string类型)
 // subFKeyName 正在遍历的子级数据外键名
 // subPrimaryKeyName 正在遍历的子级数据主键名
-// subRow 正在遍历的子级数据行号
+// subRow 正在遍历的子级数据行
 // newValueOf 正在等待填充的 chilren 切片元素中的结构体的 valueof
 func (s *sqlResFormatTree) getLevelGe2Children(fieldNum int, resChildren reflect.Value, newTypeOf reflect.Type, parentRowIndex int64, subRowIndex int, ParentId interface{}, subFKeyName, subPrimaryKeyName string, subRow, newValueOf reflect.Value) (reflect.Value, error) {
 	for j := 0; j < fieldNum; j++ {
