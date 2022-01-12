@@ -22,27 +22,26 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 
 ```
 
-### 3.核心转换逻辑
+### 4.核心转换原理
 > 1.数据需要严谨的排序，从左到右，左侧的数据范围必须包括右边的子级数据，如果数据是乱序的，本包查询子级是基于左侧一条数据，依次向下提取子级的，最终会导致漏掉某些数据.    
 > 2.以上核心思想总结就是一句话：左侧到右侧，数据范围依次缩小，相同性质的数据必须放在一起.    
-- 3.1 数据库sql查询结果  
+- 4.1 数据库sql查询结果  
   ![转换逻辑1](https://www.ginskeleton.com/images/sql0.png)
-- 3.2 gorm函数Scan、Find等获取的go切片原始数据  
+- 4.2 gorm函数Scan、Find等获取的go切片原始数据  
   ![转换逻辑2](https://www.ginskeleton.com/images/sql1.png)
-- 3.3 原始数据转换为树形数据的过程逻辑    
+- 4.3 原始数据转换为树形数据的过程逻辑    
   ![转换逻辑2](https://www.ginskeleton.com/images/process2.png)
 
-###  5.使用方法，相关代码详情
+###  5.sql结果转换为树形化结果的主要场景  
 1. [sql结果有限级且支持个性化设置子结构体字段树形化](./test/dataToTree_test.go)  
-2. [单张表sql结果无限级树形化](./test/dataToTree2_test.go)  
-> 2.1 单张表，例如：省份城市树形表,特点是id是唯一的.  
+2. [单张表sql结果无限级树形化](./test/dataToTree2_test.go) ,单张树形表，例如：省份城市树形表,特点默认情况下是id是唯一的.
+3. [多张表sql结果无限级树形化](./test/dataToTree3_test.go) ,多张表树形表，例如：A表是树形表、B表是树形表，B表是A表的子表（B挂接在A表底下），这种关系下 A、B 两张表ID是存在重复值的,我们依旧可以通过变换实现树形化.   
+4. 主要思路如下(多张树形关系表转换为一张树形表关系,处理语法就和单张树形表一致了)：
 
-3. [多张表sql结果无限级树形化](./test/dataToTree3_test.go)  
-> 3.1 多张表，例如：A表是树形表、B表是树形表、C表是树形表，但是他们依次是挂接关系，这样的三张表查询的数据大概率ID存在重复,我们依旧可以实现树形化.
-> 树形化以后，如何确定相同的id是哪张表，这个时候就需要我们事先在查询 A B C表的时候给数据打不同的标记, 这样在处理业务的时候，首选锁定业务标记，再获取ID.  
-> 3.2 多张树形表查询结果必须将每一张表的数据呈现在一起，不能把 A B C三张表的数据无序地混合在一起，这样会导致树形结果漏掉数据.  
+![转换1](https://www.ginskeleton.com/images/tree_conv1.png)
+![转换2](https://www.ginskeleton.com/images/tree_conv2.png)
 
-###  6主要实现过程  
+###  6.场景1：平行数据，每一块数据通过外键关联  
 - 更多的示例代码您可以直接参考、复制单元测试目录内的示例代码，[查看详更多示例代码](./test/)  
 #### 6.1.有限层级的数据,支持每一层拥有不同字段的结构体树形化     
 [详细实现过程](./test/dataToTree_test.go)  
@@ -61,11 +60,13 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 	{SchoolId:2 SchoolName:初级中学 FkSchoolId:2 GradeId:6 GradeName:初三 FkGradeId:6 ClassId:6 ClassName:中考冲刺班}
 ]
 ```
-####  6.2 使用本包函数 ScanToTreeData(inSqlSlice, &dest),直接将 dest 变量json化结果：
+####  6.2 使用本包函数 ScanToTreeData(inSqlSlice, &dest),直接将 dest 变量转换为树形化结果：
 - 使用非常简单，本包只有三个语法关键词
 - 1 `primaryKey:"yes"` 定义每一级的主键
 - 2 `fid:"父级键名"` 在子级特定的键上指定此标签，这样就把该键和父级结构体中的键建立了绑定(关联)关系
 - 3 `default:"默认值"` 定义的dest结构体中的字段如果在被扫描的sql结果集中不存在，那么使用该默认值填充. 
+- 4 `Children` 结构体挂载下一级的字段(成员)，必须使用 `Children` 单词,您可以通过 `json` 修改为其他单词。 
+
 ```code
 	
 	// 接受树形结果的结构体要求如下：
@@ -100,7 +101,7 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 ![效果图1](https://www.ginskeleton.com/images/tree1.jpg)  
 
 
-###  7.无限层级的数据(结构体自己嵌套自己)树形化  
+###  7.场景2：无限层级的数据树形
 [详细实现过程](./test/dataToTree2_test.go)    
 - 注意细节：Id 作为每一级的主键首字母必须是大写的（允许本包进行修改字段值），一般来说gorm查询的结果都是符合此条件的，
 - 如果是手动模拟输入以下数据，则必须要注意此项。
@@ -130,7 +131,7 @@ sql_res_to_tree.CreateSqlResFormatFactory().ScanToTreeData(inSqlSlice, &dest);
 	// 1.主键必须使用 primaryKey:"yes" 标签定义，类型必须是  int  int64 in32 等int系列，以及 string 类型，不能是其他类型
 	// 2.子结构体关联父级结构体的键必须定义 `fid:"父级主键"`  标签，父子关联键数据类型必须都是 int  int32  int64 等int系列和 string 类型
 	
-	// 定义一个目标切片，用于接受最终的树形化数据
+	// 定义一个目标切片，格式为树形结构，结构体自己嵌套自己，用于接受最终的树形化数据
 	type ProvinceCity struct {
 		Id       int64 `primaryKey:"yes"`
 		CityName string
