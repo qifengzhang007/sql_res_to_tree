@@ -31,8 +31,7 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 	s.inSliceValueOf = inValueOf // sql原始值的 valueOf 存储起来
 	s.inSliceLen = inValueOf.Len()
 
-	inLen := inValueOf.Len()
-	if inLen == 0 {
+	if s.inSliceLen == 0 {
 		return errors.New(inSliceErrMustValidSlice)
 	}
 
@@ -43,7 +42,6 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 
 	// 根据 dest 参数的指针获取对应的切片元素
 	destValueOf := reflect.ValueOf(destSlicePtr).Elem()
-
 	if destValueOf.Type().Kind() != reflect.Slice {
 		return errors.New(destSlicePtrErrMustSlice)
 	}
@@ -75,7 +73,7 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 	var primaryKeyIdInterf interface{}
 
 	//遍历sql查询结果集的每一行数据
-	for rowIndex := 0; rowIndex < inLen; rowIndex++ {
+	for rowIndex := 0; rowIndex < s.inSliceLen; rowIndex++ {
 		s.counts++
 		// 获取正在遍历的当前行数据
 		row := inValueOf.Index(rowIndex)
@@ -343,16 +341,16 @@ func (s *sqlResFormatTree) analysisChildren(parentRowIndex int64, parentField re
 
 // 获取 ≥ 2层级的 children 切片的内容
 // 参数解释
-// fieldNum 正在等待填充的 chilren 切片元素中的结构体字段数
-// resChildren 正在等待填充的 chilren 切片初始化后的变量
-// newTypeOf 正在等待填充的 chilren 切片元素中的结构体的 typeof
-// parentRowIndex 正在提取 chilren中数据时的当前行号
+// fieldNum 正在等待填充的 children 切片元素中的结构体字段数
+// resChildren 正在等待填充的 children 切片初始化后的变量
+// newTypeOf 正在等待填充的 children 切片元素中的结构体的 typeof
+// parentRowIndex 正在提取 children 中数据时的当前行号
 // subRowIndex 正在遍历的子级数据行号
-// ParentId 正在提取 chilren中数据时的主键id(interface类型，主要是 int、string类型)
+// ParentId 正在提取 children中数据时的主键id(interface类型，主要是 int、string类型)
 // subFKeyName 正在遍历的子级数据外键名
 // subPrimaryKeyName 正在遍历的子级数据主键名
 // subRow 正在遍历的子级数据行
-// newValueOf 正在等待填充的 chilren 切片元素中的结构体的 valueof
+// newValueOf 正在等待填充的 children 切片元素中的结构体的 valueOf
 func (s *sqlResFormatTree) getLevelGe2Children(fieldNum int, resChildren reflect.Value, newTypeOf reflect.Type, parentRowIndex int64, subRowIndex int, ParentId interface{}, subFKeyName, subPrimaryKeyName string, subRow, newValueOf reflect.Value) (reflect.Value, error) {
 	for j := 0; j < fieldNum; j++ {
 		if newTypeOf.Field(j).Type.Kind() == reflect.Slice && newTypeOf.Field(j).Name == "Children" {
