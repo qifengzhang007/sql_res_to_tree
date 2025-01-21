@@ -36,7 +36,7 @@ type SqlList struct {
 //{SchoolId:2 SchoolName:第二中学(初中)            FkSchoolId:2 GradeId:6 GradeName:初三           FkGradeId:6 ClassId:7 ClassName:中考冲刺班}
 //]
 
-//  指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
+// 指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
 func TestScanWay1(t *testing.T) {
 
 	// 定义一个目标切片，用于接受最终的树形化数据
@@ -44,11 +44,11 @@ func TestScanWay1(t *testing.T) {
 		SchoolId   int    `primaryKey:"yes" json:"school_id"`
 		SchoolName string `json:"school_name"`
 		TestRemark string `json:"test_remark" default:"第一层结构体测试默认值"`
-		Children   []struct {
+		Children   *[]struct {
 			FkSchoolId int `fid:"SchoolId"`
 			GradeId    int `primaryKey:"yes"`
 			GradeName  string
-			Children   []struct {
+			Children   *[]struct {
 				FkGradeId int `fid:"GradeId"`
 				ClassId   int `primaryKey:"yes"`
 				ClassName string
@@ -72,7 +72,7 @@ func TestScanWay1(t *testing.T) {
 	}
 }
 
-//  模拟一个具有多层次，但是每个结构体字段不同的结构体切片进行树形化
+// 模拟一个具有多层次，但是每个结构体字段不同的结构体切片进行树形化
 func mocData() []SqlList {
 	var demoList = make([]SqlList, 0)
 

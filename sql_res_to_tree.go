@@ -2,6 +2,7 @@ package sql_res_to_tree
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -112,6 +113,13 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 					} else {
 						return err
 					}
+				} else if destStructElem.Field(i).Name == "Children" && destStructElem.Field(i).Type.Kind() == reflect.Ptr {
+					if val, err := s.analysisChildren(int64(rowIndex), row, destStructElem.Field(i).Type.Elem()); err == nil {
+						fmt.Printf("返回结果：%#+v\n", val)
+						//structElemValueOf.Field(i).Set()  // 这里需要指针...
+					} else {
+						return err
+					}
 				} else {
 					// dest 接受字段名称和类型与 sql 切片结果遍历中的某一条，
 					// 必须是字段名和数据类型相同，则可以赋值
@@ -138,7 +146,7 @@ func (s *sqlResFormatTree) storePrimaryKey(keyName string) {
 	}
 }
 
-//  获取正在分析(处理)的结构体主键键名（PrimaryKey）
+// 获取正在分析(处理)的结构体主键键名（PrimaryKey）
 func (s *sqlResFormatTree) getCurStructPrimaryKeyName(rTypeOf reflect.Type) string {
 	numField := rTypeOf.NumField()
 	for i := 0; i < numField; i++ {
