@@ -37,7 +37,7 @@ type SqlCityList struct {
 //    {id:12 CityName:复兴区      Fid:10   Status:1 Remark:"市区划分"}
 //]
 
-//  指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
+// 指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
 func TestScanWay2(t *testing.T) {
 
 	// 定义一个目标切片，用于接受最终的树形化数据

@@ -2,7 +2,6 @@ package sql_res_to_tree
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
@@ -113,8 +112,9 @@ func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr inte
 					}
 				} else if destStructElem.Field(i).Name == "Children" && destStructElem.Field(i).Type.Kind() == reflect.Ptr {
 					if val, err := s.analysisChildren(int64(rowIndex), row, destStructElem.Field(i).Type.Elem()); err == nil {
-						fmt.Printf("返回结果：%#+v\n", val)
-						//structElemValueOf.Field(i).Set()  // 这里需要指针...
+						tmpVal := reflect.New(val.Type())
+						tmpVal.Elem().Set(val)
+						structElemValueOf.Field(i).Set(tmpVal)
 					} else {
 						return err
 					}
@@ -357,15 +357,26 @@ func (s *sqlResFormatTree) getLevelGe2Children(fieldNum int, resChildren reflect
 			if s.curItemHasSubLists(parentRowIndex, ParentId, subFKeyName) {
 				if dataType, err := s.curPrimaryKeyDataType(subRow, subPrimaryKeyName); err == nil {
 					switch dataType {
-					case 1:
+					case 1, 2:
 						if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type); err == nil {
 							newValueOf.Field(j).Set(val)
 						} else {
 							return reflect.Value{}, err
 						}
-					case 2:
-						if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type); err == nil {
-							newValueOf.Field(j).Set(val)
+					}
+				}
+			} else {
+				return resChildren, nil
+			}
+		} else if newTypeOf.Field(j).Type.Kind() == reflect.Ptr && newTypeOf.Field(j).Name == "Children" {
+			if s.curItemHasSubLists(parentRowIndex, ParentId, subFKeyName) {
+				if dataType, err := s.curPrimaryKeyDataType(subRow, subPrimaryKeyName); err == nil {
+					switch dataType {
+					case 1, 2:
+						if val, err := s.analysisChildren(int64(subRowIndex), subRow, newTypeOf.Field(j).Type.Elem()); err == nil {
+							tmpVal := reflect.New(val.Type())
+							tmpVal.Elem().Set(val)
+							newValueOf.Field(j).Set(tmpVal)
 						} else {
 							return reflect.Value{}, err
 						}

@@ -35,7 +35,7 @@ type SqlListString struct {
 //{SchoolId:2 SchoolName:初级中学            FkSchoolId:2 GradeId:6 GradeName:初三           FkGradeId:6 ClassId:6 ClassName:中考冲刺班}
 //]
 
-//  指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
+// 指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
 func TestScanStringData(t *testing.T) {
 
 	// 定义一个目标切片，用于接受最终的树形化数据
@@ -71,7 +71,7 @@ func TestScanStringData(t *testing.T) {
 	}
 }
 
-//  模拟一个具有多层次，但是每个结构体字段不同的结构体切片进行树形化
+// 模拟一个具有多层次，但是每个结构体字段不同的结构体切片进行树形化
 func mocStrData() []SqlListString {
 	var demoList = make([]SqlListString, 0)
 
