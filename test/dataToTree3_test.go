@@ -54,12 +54,12 @@ func TestScanWay3(t *testing.T) {
 	// 定义一个目标切片，用于接受最终的树形化数据
 	// 结构体的定义类似 示例2 ，和示例2不同点在于sql查询语法上有差异
 	type SqlDeptMenuButton struct {
-		Id       int64               `primaryKey:"yes"`
-		OrgTitle string              `json:"org_title"`
-		OrgFid   int64               `fid:"Id" json:"org_fid"`
-		NodeType string              `json:"node_type"`
-		Expand   int                 `json:"expand"`
-		Children []SqlDeptMenuButton `json:"children"`
+		Id       int64                `primaryKey:"yes"`
+		OrgTitle string               `json:"org_title"`
+		OrgFid   int64                `fid:"Id" json:"org_fid"`
+		NodeType string               `json:"node_type"`
+		Expand   int                  `json:"expand"`
+		Children *[]SqlDeptMenuButton `json:"children"` //  说明： 该处的数据类型可以为： *[]SqlDeptMenuButton  或者  []SqlDeptMenuButton
 	}
 	var dest = make([]SqlDeptMenuButton, 0)
 	// 模拟一份结构体切片格式的数据集(相当于gorm的sql函数 Scan Find的结果)
