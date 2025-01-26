@@ -41,14 +41,14 @@ func TestScanWay1(t *testing.T) {
 
 	// 定义一个目标切片，用于接受最终的树形化数据
 	type Stu struct {
-		SchoolId   int         `primaryKey:"yes" json:"school_id"`
-		SchoolName string      `json:"school_name"`
-		TestRemark string      `json:"test_remark" default:"第一层结构体测试默认值"`
-		Children   *[]struct { // 注意A： 如果底层的children类型为  *[]struct{ ...  } , 那么在 注意B 的地方必须保持相同的类型：  *[]struct{ ...  }
+		SchoolId   int        `primaryKey:"yes" json:"school_id"`
+		SchoolName string     `json:"school_name"`
+		TestRemark string     `json:"test_remark" default:"第一层结构体测试默认值"`
+		Children   []struct { // 注意A： 如果底层的children类型为  *[]struct{ ...  } , 那么在 注意B 的地方必须保持相同的类型：  *[]struct{ ...  }
 			FkSchoolId int `fid:"SchoolId"`
 			GradeId    int `primaryKey:"yes"`
 			GradeName  string
-			Children   *[]struct { //注意B：  这里的数据类型必须与 注意A保持一致  *[]struct{ ...  }
+			Children   []struct { //注意B：  这里的数据类型必须与 注意A保持一致  *[]struct{ ...  }
 				FkGradeId int `fid:"GradeId"`
 				ClassId   int `primaryKey:"yes"`
 				ClassName string

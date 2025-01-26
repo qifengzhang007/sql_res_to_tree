@@ -37,7 +37,7 @@ type SqlCityListString struct {
 //    {id:12 CityName:复兴区      Fid:10   Status:1 Remark:"市区划分"}
 //]
 
-//  指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
+// 指定目标接受数据的切片，程序自动从sql查询结果切片中扫描填充数据
 func TestScanString2(t *testing.T) {
 
 	// 定义一个目标切片，用于接受最终的树形化数据
@@ -47,7 +47,7 @@ func TestScanString2(t *testing.T) {
 		CityName string
 		Fid      string `fid:"Id"`
 		Status   int
-		Children []ProvinceCity
+		Children *[]ProvinceCity
 	}
 	var dest = make([]ProvinceCity, 0)
 	// 模拟一份结构体切片格式的数据集(相当于gorm的sql函数 Scan Find的结果)

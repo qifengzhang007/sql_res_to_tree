@@ -47,7 +47,7 @@ func TestScanWay2(t *testing.T) {
 		CityName string
 		Fid      int64 `fid:"Id"`
 		Status   int
-		Children []ProvinceCity //  说明： 该处的数据类型可以为： []ProvinceCity  或者   *[]ProvinceCity
+		Children *[]ProvinceCity //  说明： 该处的数据类型可以为： []ProvinceCity  或者   *[]ProvinceCity
 	}
 	var dest = make([]ProvinceCity, 0)
 	// 模拟一份结构体切片格式的数据集(相当于gorm的sql函数 Scan Find的结果)
