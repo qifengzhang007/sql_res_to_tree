@@ -18,7 +18,8 @@ type sqlResFormatTree struct {
 	inSliceLen     int
 }
 
-func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr interface{}) (err error) {
+// ScanToTreeDataOld  为原函数 ScanToTreeData 的备份
+func (s *sqlResFormatTree) ScanToTreeDataOld(inSlice interface{}, destSlicePtr interface{}) (err error) {
 	inValueOf := reflect.ValueOf(inSlice)
 	if inValueOf.Kind() != reflect.Slice {
 		return errors.New(inSliceErrMustValidSlice)
@@ -412,4 +413,212 @@ func (s *sqlResFormatTree) getCurStructParentKeyName(value reflect.Type) string 
 		}
 	}
 	return ""
+}
+
+// ScanToTreeData 是 ScanToTreeDataOld 的优化版本，代码更简洁，性能更好
+func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr interface{}) (err error) {
+	inValueOf := reflect.ValueOf(inSlice)
+	if inValueOf.Kind() != reflect.Slice {
+		return errors.New(inSliceErrMustValidSlice)
+	}
+
+	s.inSliceValueOf = inValueOf
+	s.inSliceLen = inValueOf.Len()
+
+	if s.inSliceLen == 0 {
+		return errors.New(inSliceErrMustValidSlice)
+	}
+
+	destValueOf := reflect.ValueOf(destSlicePtr)
+	if destValueOf.Kind() != reflect.Ptr || destValueOf.Elem().Kind() != reflect.Slice {
+		return errors.New(destSlicePtrErrMustPtr)
+	}
+
+	destSlice := destValueOf.Elem()
+	destElemType := destSlice.Type().Elem()
+
+	primaryKeyName := s.getCurStructPrimaryKeyName(destElemType)
+	if primaryKeyName == "" {
+		return errors.New(structErrMustPrimaryKey)
+	}
+
+	processed := make([]bool, s.inSliceLen)
+	roots := reflect.MakeSlice(destSlice.Type(), 0, 0)
+
+	for i := 0; i < s.inSliceLen; i++ {
+		if processed[i] {
+			continue
+		}
+		row := inValueOf.Index(i)
+		primaryKeyField := row.FieldByName(primaryKeyName)
+		if primaryKeyField.IsZero() {
+			continue
+		}
+
+		node, err := s.convertRowToNode(row, destElemType)
+		if err != nil {
+			return err
+		}
+
+		if err := s.attachChildren2(node, i, processed); err != nil {
+			return err
+		}
+
+		roots = reflect.Append(roots, node)
+		processed[i] = true
+	}
+
+	destSlice.Set(roots)
+	return nil
+}
+
+func (s *sqlResFormatTree) convertRowToNode(row reflect.Value, destType reflect.Type) (reflect.Value, error) {
+	node := reflect.New(destType).Elem()
+	for i := 0; i < destType.NumField(); i++ {
+		field := destType.Field(i)
+		if field.Name == "Children" {
+			continue
+		}
+		if srcField := row.FieldByName(field.Name); srcField.IsValid() && srcField.Type() == field.Type {
+			node.FieldByName(field.Name).Set(srcField)
+		} else if val, ok := s.setFieldDefaultValue(destType, field.Name); ok {
+			node.FieldByName(field.Name).Set(val)
+		}
+	}
+	return node, nil
+}
+
+func (s *sqlResFormatTree) attachChildren2(parent reflect.Value, parentIndex int, processed []bool) error {
+	s.counts++
+	if s.counts > allowMaxRows {
+		return errors.New(overAllowMaxRows)
+	}
+
+	parentType := parent.Type()
+	childrenField, hasChildren := parentType.FieldByName("Children")
+	if !hasChildren {
+		return nil
+	}
+
+	childrenType := childrenField.Type
+	var childElemType reflect.Type
+	var sliceType reflect.Type
+
+	if childrenType.Kind() == reflect.Slice {
+		childElemType = childrenType.Elem()
+		sliceType = childrenType
+	} else if childrenType.Kind() == reflect.Ptr && childrenType.Elem().Kind() == reflect.Slice {
+		childElemType = childrenType.Elem().Elem()
+		sliceType = childrenType.Elem()
+	} else {
+		return nil
+	}
+
+	childPrimaryKey := s.getCurStructPrimaryKeyName(childElemType)
+	if childPrimaryKey == "" {
+		return errors.New(structErrMustPrimaryKey)
+	}
+
+	parentKeyName := s.getCurStructParentKeyName(childElemType)
+	if parentKeyName == "" {
+		return errors.New(structErrMustFid)
+	}
+
+	// 获取子节点的外键字段名（fid标签所在的字段）
+	subFKeyName := s.getCurStructSubFKeyName(childElemType)
+	if subFKeyName == "" {
+		return errors.New(structErrMustFid + " (找不到fid标签字段)")
+	}
+
+	parentKeyField := parent.FieldByName(parentKeyName)
+	if !parentKeyField.IsValid() {
+		return errors.New(destStructFidFieldNotExists + parentKeyName)
+	}
+
+	parentKeyVal := parentKeyField.Interface()
+	children := reflect.MakeSlice(sliceType, 0, 0)
+
+	for i := parentIndex; i < s.inSliceLen; i++ {
+		if processed[i] {
+			continue
+		}
+		row := s.inSliceValueOf.Index(i)
+		childKeyField := row.FieldByName(subFKeyName) // 使用子外键字段名
+		if !childKeyField.IsValid() || childKeyField.IsZero() {
+			continue
+		}
+
+		// 检查是否找到自身（主键相同）
+		childPrimaryKeyField := row.FieldByName(childPrimaryKey)
+		if childPrimaryKeyField.IsValid() {
+			parentPrimaryKeyField := parent.FieldByName(childPrimaryKey)
+			if parentPrimaryKeyField.IsValid() && childPrimaryKeyField.Interface() == parentPrimaryKeyField.Interface() {
+				// 找到自身，跳过
+				continue
+			}
+		}
+
+		// 直接比较interface{}值
+		childKeyVal := childKeyField.Interface()
+		if parentKeyVal != childKeyVal {
+			continue
+		}
+
+		childNode, err := s.convertRowToNode(row, childElemType)
+		if err != nil {
+			return err
+		}
+
+		if err := s.attachChildren2(childNode, i, processed); err != nil {
+			return err
+		}
+
+		processed[i] = true
+		children = reflect.Append(children, childNode)
+	}
+
+	// 总是设置Children字段，即使为空
+	if childrenType.Kind() == reflect.Ptr {
+		ptrChildren := reflect.New(childrenType.Elem())
+		ptrChildren.Elem().Set(children)
+		parent.FieldByName("Children").Set(ptrChildren)
+	} else {
+		parent.FieldByName("Children").Set(children)
+	}
+	return nil
+}
+
+// valuesEqual2 比较两个反射值是否相等，支持整数和字符串类型
+func (s *sqlResFormatTree) valuesEqual2(v1, v2 reflect.Value) bool {
+	if !v1.IsValid() || !v2.IsValid() {
+		return false
+	}
+
+	// 转换为interface{}比较
+	val1 := v1.Interface()
+	val2 := v2.Interface()
+
+	switch v1.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		switch v2.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return reflect.ValueOf(val1).Int() == reflect.ValueOf(val2).Int()
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return reflect.ValueOf(val1).Int() == int64(reflect.ValueOf(val2).Uint())
+		}
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		switch v2.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return int64(reflect.ValueOf(val1).Uint()) == reflect.ValueOf(val2).Int()
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return reflect.ValueOf(val1).Uint() == reflect.ValueOf(val2).Uint()
+		}
+	case reflect.String:
+		if v2.Kind() == reflect.String {
+			return reflect.ValueOf(val1).String() == reflect.ValueOf(val2).String()
+		}
+	}
+
+	// 回退到简单比较
+	return val1 == val2
 }

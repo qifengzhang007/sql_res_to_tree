@@ -3,8 +3,9 @@ package test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/qifengzhang007/sql_res_to_tree"
 	"testing"
+
+	"github.com/qifengzhang007/sql_res_to_tree"
 )
 
 // 单元测试示例
