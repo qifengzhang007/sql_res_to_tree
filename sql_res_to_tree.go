@@ -4,7 +4,6 @@ import (
 	"errors"
 	"reflect"
 	"strconv"
-	"strings"
 )
 
 func CreateSqlResFormatFactory() *sqlResFormatTree {
@@ -18,14 +17,14 @@ type sqlResFormatTree struct {
 	inSliceLen     int
 }
 
-// ScanToTreeDataOld  为原函数 ScanToTreeData 的备份
-func (s *sqlResFormatTree) ScanToTreeDataOld(inSlice interface{}, destSlicePtr interface{}) (err error) {
+// ScanToTreeData 是 ScanToTreeDataOld 的优化版本，代码更简洁，性能更好
+func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr interface{}) (err error) {
 	inValueOf := reflect.ValueOf(inSlice)
 	if inValueOf.Kind() != reflect.Slice {
 		return errors.New(inSliceErrMustValidSlice)
 	}
 
-	s.inSliceValueOf = inValueOf // sql原始值的 valueOf 存储起来
+	s.inSliceValueOf = inValueOf
 	s.inSliceLen = inValueOf.Len()
 
 	if s.inSliceLen == 0 {
@@ -38,79 +37,40 @@ func (s *sqlResFormatTree) ScanToTreeDataOld(inSlice interface{}, destSlicePtr i
 	}
 
 	destSlice := destValueOf.Elem()
-	destTmpSlice := reflect.MakeSlice(destSlice.Type(), 0, 0)
+	destElemType := destSlice.Type().Elem()
 
-	destStructElem := destSlice.Type().Elem()
-	primaryKeyName := s.getCurStructPrimaryKeyName(destStructElem)
+	primaryKeyName := s.getCurStructPrimaryKeyName(destElemType)
 	if primaryKeyName == "" {
 		return errors.New(structErrMustPrimaryKey)
 	}
-	s.storePrimaryKey(primaryKeyName)
 
-	tmpDestStructElem := reflect.New(destStructElem)
-	structElemTypeOf := tmpDestStructElem.Elem().Type()
-	structElemValueOf := tmpDestStructElem.Elem()
-	fieldNum := structElemTypeOf.NumField()
+	processed := make([]bool, s.inSliceLen)
+	roots := reflect.MakeSlice(destSlice.Type(), 0, 0)
 
-	for rowIndex := 0; rowIndex < s.inSliceLen; rowIndex++ {
-		s.counts++
-		row := inValueOf.Index(rowIndex)
-		if !s.destStructFieldIsExists(row.Type(), primaryKeyName) {
-			return errors.New(destStructFieldNotExists + primaryKeyName)
+	for i := 0; i < s.inSliceLen; i++ {
+		if processed[i] {
+			continue
+		}
+		row := inValueOf.Index(i)
+		primaryKeyField := row.FieldByName(primaryKeyName)
+		if primaryKeyField.IsZero() {
+			continue
 		}
 
-		primaryKeyDataType, err := s.curPrimaryKeyDataType(row, primaryKeyName)
+		node, err := s.convertRowToNode(row, destElemType)
 		if err != nil {
 			return err
 		}
 
-		mainKeyField := row.FieldByName(primaryKeyName)
-		var primaryKeyIdInterf interface{}
-
-		switch primaryKeyDataType {
-		case 1:
-			if primaryKeyIdInt := mainKeyField.Int(); primaryKeyIdInt > 0 {
-				primaryKeyIdInterf = primaryKeyIdInt
-			} else {
-				continue
-			}
-		case 2:
-			if primaryKeyIdStr := mainKeyField.String(); strings.TrimSpace(primaryKeyIdStr) != "" {
-				primaryKeyIdInterf = primaryKeyIdStr
-			} else {
-				continue
-			}
+		if err := s.attachChildren2(node, i, processed); err != nil {
+			return err
 		}
 
-		if primaryKeyIdInterf != nil {
-			for i := 0; i < fieldNum; i++ {
-				field := destStructElem.Field(i)
-				if field.Name == "Children" {
-					if field.Type.Kind() == reflect.Slice {
-						if val, err := s.analysisChildren(int64(rowIndex), row, field.Type); err == nil {
-							structElemValueOf.Field(i).Set(val)
-						} else {
-							return err
-						}
-					} else if field.Type.Kind() == reflect.Ptr {
-						if val, err := s.analysisChildren(int64(rowIndex), row, field.Type.Elem()); err == nil {
-							tmpVal := reflect.New(val.Type())
-							tmpVal.Elem().Set(val)
-							structElemValueOf.Field(i).Set(tmpVal)
-						} else {
-							return err
-						}
-					}
-				} else if s.destStructFieldIsSame(row.Type(), field) {
-					structElemValueOf.Field(i).Set(row.FieldByName(field.Name))
-				} else if val, ok := s.setFieldDefaultValue(structElemTypeOf, field.Name); ok {
-					structElemValueOf.Field(i).Set(val)
-				}
-			}
-			destTmpSlice = reflect.Append(destTmpSlice, structElemValueOf)
-		}
+		roots = reflect.Append(roots, node)
+		processed[i] = true
 	}
-	destSlice.Set(destTmpSlice)
+
+	destSlice.Set(roots)
 	return nil
 }
 
@@ -413,63 +373,6 @@ func (s *sqlResFormatTree) getCurStructParentKeyName(value reflect.Type) string 
 		}
 	}
 	return ""
-}
-
-// ScanToTreeData 是 ScanToTreeDataOld 的优化版本，代码更简洁，性能更好
-func (s *sqlResFormatTree) ScanToTreeData(inSlice interface{}, destSlicePtr interface{}) (err error) {
-	inValueOf := reflect.ValueOf(inSlice)
-	if inValueOf.Kind() != reflect.Slice {
-		return errors.New(inSliceErrMustValidSlice)
-	}
-
-	s.inSliceValueOf = inValueOf
-	s.inSliceLen = inValueOf.Len()
-
-	if s.inSliceLen == 0 {
-		return errors.New(inSliceErrMustValidSlice)
-	}
-
-	destValueOf := reflect.ValueOf(destSlicePtr)
-	if destValueOf.Kind() != reflect.Ptr || destValueOf.Elem().Kind() != reflect.Slice {
-		return errors.New(destSlicePtrErrMustPtr)
-	}
-
-	destSlice := destValueOf.Elem()
-	destElemType := destSlice.Type().Elem()
-
-	primaryKeyName := s.getCurStructPrimaryKeyName(destElemType)
-	if primaryKeyName == "" {
-		return errors.New(structErrMustPrimaryKey)
-	}
-
-	processed := make([]bool, s.inSliceLen)
-	roots := reflect.MakeSlice(destSlice.Type(), 0, 0)
-
-	for i := 0; i < s.inSliceLen; i++ {
-		if processed[i] {
-			continue
-		}
-		row := inValueOf.Index(i)
-		primaryKeyField := row.FieldByName(primaryKeyName)
-		if primaryKeyField.IsZero() {
-			continue
-		}
-
-		node, err := s.convertRowToNode(row, destElemType)
-		if err != nil {
-			return err
-		}
-
-		if err := s.attachChildren2(node, i, processed); err != nil {
-			return err
-		}
-
-		roots = reflect.Append(roots, node)
-		processed[i] = true
-	}
-
-	destSlice.Set(roots)
-	return nil
 }
 
 func (s *sqlResFormatTree) convertRowToNode(row reflect.Value, destType reflect.Type) (reflect.Value, error) {
